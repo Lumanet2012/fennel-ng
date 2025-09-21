@@ -1,6 +1,5 @@
-var xml = require("libxmljs");
+// XML parsing temporarily disabled
 var xh = require("../libs/xmlhelper");
-var LSE_logger = require('LSE_logger');
 var principalRead = require('./principal-read');
 var principalUtil = require('./principal-util');
 module.exports = {
@@ -11,12 +10,12 @@ module.exports = {
 };
 function options(comm)
 {
-    LSE_logger.debug(`[Fennel-NG Principal] principal.options called`);
+    LSE_Logger.debug(`[Fennel-NG Principal] principal.options called`);
     comm.pushOptionsResponse();
 }
 function proppatch(comm)
 {
-    LSE_logger.debug(`[Fennel-NG Principal] principal.proppatch called`);
+    LSE_Logger.debug(`[Fennel-NG Principal] principal.proppatch called`);
     comm.setStandardHeaders(comm);
     var url = comm.getURL();
     comm.setResponseCode(200);

@@ -1,5 +1,4 @@
-var xml = require("libxmljs");
-var LSE_logger = require('LSE_logger');
+// XML parsing temporarily disabled
 function getCalendarUserAddressSet(comm)
 {
     var response = "";
@@ -68,10 +67,8 @@ function replyPropertyCalendarProxyWriteFor(comm)
     comm.appendResBody("</d:multistatus>\r\n");
 }
 module.exports = {
-    getCalendarUserAddressSet: getCalendarUserAddressSet,
     getSupportedReportSet: getSupportedReportSet,
     getPrincipalSearchPropertySet: getPrincipalSearchPropertySet,
     isReportPropertyCalendarProxyWriteFor: isReportPropertyCalendarProxyWriteFor,
     replyPropertyCalendarProxyWriteFor: replyPropertyCalendarProxyWriteFor
 };
-x

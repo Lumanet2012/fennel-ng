@@ -1,8 +1,8 @@
-var log = require('../libs/log').log;
+var log = LSE_Logger;
 var ICS = require('../libs/db').ICS;
 function move(comm)
 {
-    log.debug("calendar.move called");
+    LSE_Logger.info("calendar.move called");
     comm.setStandardHeaders();
     var ics_id = comm.getFilenameFromPath(true);
     var calendar = comm.getCalIdFromURL();
@@ -24,14 +24,14 @@ function move(comm)
         {
             if(ics === null)
             {
-                log.warn('ics not found');
+                LSE_Logger.warn('ics not found');
             }
             else
             {
                 ics.calendarId = newCal;
                 ics.save().then(function()
                 {
-                    log.warn('ics updated');
+                    LSE_Logger.warn('ics updated');
                 });
             }
         });

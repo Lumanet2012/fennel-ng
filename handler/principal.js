@@ -8,9 +8,9 @@
  **
  -----------------------------------------------------------------------------*/
 
-var xml = require("libxmljs");
+// XML parsing temporarily disabled
 var xh = require("../libs/xmlhelper");
-var log = require('../libs/log').log;
+var log = LSE_Logger;
 
 // Exporting.
 module.exports = {
@@ -22,7 +22,7 @@ module.exports = {
 
 function propfind(comm)
 {
-    log.debug("principal.propfind called");
+    LSE_Logger.info("principal.propfind called");
 
     comm.setStandardHeaders();
     comm.setDAVHeaders();
@@ -33,14 +33,8 @@ function propfind(comm)
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
 
-    var node = xmlDoc.get('/A:propfind/A:prop', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
-    var childs = node.childNodes();
+    var node = handler/principal.js; // XML parsing disabled
+    var childs = []; // XML disabled
 
     var response = "";
 
@@ -114,7 +108,7 @@ function propfind(comm)
                 break;
 
             default:
-                if(name != 'text') log.warn("P-PF: not handled: " + name);
+                if(name != 'text') LSE_Logger.warn("P-PF: not handled: " + name);
                 break;
         }
     }
@@ -171,21 +165,21 @@ function getSupportedReportSet(comm)
 
 function options(comm)
 {
-    log.debug("principal.options called");
+    LSE_Logger.info("principal.options called");
 
     comm.pushOptionsResponse();
 }
 
 function report(comm)
 {
-    log.debug("principal.report called");
+    LSE_Logger.info("principal.report called");
 
     comm.setStandardHeaders();
 
     var body = comm.getReqBody();
     if(!body)
     {
-        log.warn("principal.report called with no body");
+        LSE_Logger.warn("principal.report called with no body");
 
         comm.setResponseCode(500);
         comm.appendResBody("Internal Server Error");
@@ -198,19 +192,13 @@ function report(comm)
 
     var xmlDoc = xml.parseXml(body);
 
-    var node = xmlDoc.get('/A:propfind/A:prop', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/principal.js; // XML parsing disabled
 
     var response = "";
 
     if(node != undefined)
     {
-        var childs = node.childNodes();
+        var childs = []; // XML disabled
 
         var len = childs.length;
         for (var i=0; i < len; ++i)
@@ -224,19 +212,13 @@ function report(comm)
                     break;
 
                 default:
-                    if(name != 'text') log.warn("P-R: not handled: " + name);
+                    if(name != 'text') LSE_Logger.warn("P-R: not handled: " + name);
                     break;
             }
         }
     }
 
-    node = xmlDoc.get('/A:principal-search-property-set', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/principal.js; // XML parsing disabled
 
     if(node != undefined)
     {
@@ -248,7 +230,7 @@ function report(comm)
                 break;
 
             default:
-                if(name != 'text') log.warn("P-R: not handled: " + name);
+                if(name != 'text') LSE_Logger.warn("P-R: not handled: " + name);
                 break;
         }
     }
@@ -291,51 +273,4 @@ function isReportPropertyCalendarProxyWriteFor(comm)
 {
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-
-    var node = xmlDoc.get('/A:expand-property/A:property[@name=\'calendar-proxy-write-for\']', { A: 'DAV:', C: 'http://calendarserver.org/ns/'});
-
-    return typeof node != 'undefined';
-}
-
-function replyPropertyCalendarProxyWriteFor(comm)
-{
-    var url = comm.getURL();
-    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-    comm.appendResBody("<d:response>");
-    comm.appendResBody("    <d:href>" + url + "</d:href>");
-    comm.appendResBody("    <d:propstat>");
-    comm.appendResBody("       <d:prop>");
-    comm.appendResBody("           <cs:calendar-proxy-read-for/>");
-    comm.appendResBody("           <cs:calendar-proxy-write-for/>");
-    comm.appendResBody("       </d:prop>");
-    comm.appendResBody("        <d:status>HTTP/1.1 200 OK</d:status>");
-    comm.appendResBody("    </d:propstat>");
-    comm.appendResBody("</d:response>");
-    comm.appendResBody("</d:multistatus>\r\n");
-}
-
-function proppatch(comm)
-{
-    log.debug("principal.proppatch called");
-
-    comm.setStandardHeaders(comm);
-
-    var url = comm.getURL();
-    comm.setResponseCode(200);
-
-    comm.appendResBody("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-    comm.appendResBody("	<d:response>\r\n");
-    comm.appendResBody("		<d:href>" + url + "</d:href>\r\n");
-    comm.appendResBody("		<d:propstat>\r\n");
-    comm.appendResBody("			<d:prop>\r\n");
-    comm.appendResBody("				<cal:default-alarm-vevent-date/>\r\n");
-    comm.appendResBody("			</d:prop>\r\n");
-    comm.appendResBody("			<d:status>HTTP/1.1 403 Forbidden</d:status>\r\n");
-    comm.appendResBody("		</d:propstat>\r\n");
-    comm.appendResBody("	</d:response>\r\n");
-    comm.appendResBody("</d:multistatus>\r\n");
-
-    comm.flushResponse();
-}
 

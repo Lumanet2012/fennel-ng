@@ -1,6 +1,5 @@
-var xml = require("libxmljs");
+// XML parsing temporarily disabled
 var xh = require("../libs/xmlhelper");
-var LSE_logger = require('LSE_logger');
 var redis = require('../libs/redis');
 var VCARDS = require('../libs/db').VCARDS;
 var ADDRESSBOOKS = require('../libs/db').ADDRESSBOOKS;
@@ -20,19 +19,19 @@ module.exports = {
 };
 function put(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CardDAV] addressbook.put called`);
+    LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.put called`);
     var vcardUri = comm.getFilenameFromPath(false);
     var addressbookUri = comm.getPathElement(3);
     var username = comm.getUser().getUserName();
     var body = comm.getReqBody();
     var match = body.search(/X-ADDRESSBOOKSERVER-KIND:group/);
     var isGroup = (match >= 0);
-    LSE_logger.debug(`[Fennel-NG CardDAV] Putting vCard: ${vcardUri} to addressbook: ${addressbookUri}, isGroup: ${isGroup}`);
+    LSE_Logger.debug(`[Fennel-NG CardDAV] Putting vCard: ${vcardUri} to addressbook: ${addressbookUri}, isGroup: ${isGroup}`);
     ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
-            LSE_logger.warn(`[Fennel-NG CardDAV] Addressbook not found: ${addressbookUri}`);
+            LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found: ${addressbookUri}`);
             comm.setResponseCode(404);
             comm.flushResponse();
             return;
@@ -53,7 +52,7 @@ function put(comm)
         {
             if(existingVCard && ifNoneMatch && ifNoneMatch === "*")
             {
-                LSE_logger.debug(`[Fennel-NG CardDAV] If-None-Match matches, returning 412 for: ${vcardUri}`);
+                LSE_Logger.debug(`[Fennel-NG CardDAV] If-None-Match matches, returning 412 for: ${vcardUri}`);
                 comm.setStandardHeaders();
                 comm.setHeader("ETag", `"${existingVCard.etag}"`);
                 comm.setResponseCode(412);
@@ -68,7 +67,7 @@ function put(comm)
             var operation = isCreating ? 1 : 2;
             return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
             {
-                LSE_logger.debug(`[Fennel-NG CardDAV] Updated sync token: ${newSyncToken} for addressbook: ${addressbookUri}`);
+                LSE_Logger.debug(`[Fennel-NG CardDAV] Updated sync token: ${newSyncToken} for addressbook: ${addressbookUri}`);
                 if(existingVCard)
                 {
                     existingVCard.carddata = body;
@@ -90,7 +89,7 @@ function put(comm)
                     operation: operation
                 }).then(function()
                 {
-                    LSE_logger.info(`[Fennel-NG CardDAV] ${isCreating ? 'Created' : 'Updated'} vCard: ${vcardUri}`);
+                    LSE_Logger.info(`[Fennel-NG CardDAV] ${isCreating ? 'Created' : 'Updated'} vCard: ${vcardUri}`);
                     comm.setStandardHeaders();
                     comm.setHeader("ETag", `"${etag}"`);
                     comm.setHeader("Last-Modified", new Date(now * 1000).toUTCString());
@@ -101,34 +100,28 @@ function put(comm)
         });
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG CardDAV] Error in put: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG CardDAV] Error in put: ${error.message}`);
         comm.setResponseCode(500);
         comm.flushResponse();
     });
 }
 function proppatch(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CardDAV] addressbook.proppatch called`);
+    LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.proppatch called`);
     comm.setStandardHeaders();
     comm.setResponseCode(200);
     comm.appendResBody(xh.getXMLHead());
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.get('/A:propertyupdate/A:set/A:prop', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:carddav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/addressbook-main.js; // XML parsing disabled
     if(!node)
     {
-        LSE_logger.warn(`[Fennel-NG CardDAV] No property update node found in proppatch`);
+        LSE_Logger.warn(`[Fennel-NG CardDAV] No property update node found in proppatch`);
         comm.setResponseCode(400);
         comm.flushResponse();
         return;
     }
-    var childs = node.childNodes();
+    var childs = []; // XML disabled
     var addressbookUri = comm.getPathElement(3);
     var username = comm.getUser().getUserName();
     var response = "";
@@ -136,7 +129,7 @@ function proppatch(comm)
     {
         if(!adb)
         {
-            LSE_logger.warn(`[Fennel-NG CardDAV] Addressbook not found for proppatch: ${addressbookUri}`);
+            LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found for proppatch: ${addressbookUri}`);
             var len = childs.length;
             for (var i=0; i < len; ++i)
             {
@@ -173,19 +166,19 @@ function proppatch(comm)
                     adb.displayname = child.text();
                     response += "<d:displayname/>";
                     updated = true;
-                    LSE_logger.debug(`[Fennel-NG CardDAV] Updated displayname to: ${child.text()}`);
+                    LSE_Logger.debug(`[Fennel-NG CardDAV] Updated displayname to: ${child.text()}`);
                     break;
                 case 'description':
                     adb.description = child.text();
                     response += "<card:description/>";
                     updated = true;
-                    LSE_logger.debug(`[Fennel-NG CardDAV] Updated description`);
+                    LSE_Logger.debug(`[Fennel-NG CardDAV] Updated description`);
                     break;
                 default:
                     if(name && name !== 'text')
                     {
                         response += `<${name}/>`;
-                        LSE_logger.warn(`[Fennel-NG CardDAV] Unhandled proppatch property: ${name}`);
+                        LSE_Logger.warn(`[Fennel-NG CardDAV] Unhandled proppatch property: ${name}`);
                     }
                     break;
             }
@@ -197,7 +190,7 @@ function proppatch(comm)
             {
                 return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
                 {
-                    LSE_logger.info(`[Fennel-NG CardDAV] Addressbook properties updated, sync token: ${newSyncToken}`);
+                    LSE_Logger.info(`[Fennel-NG CardDAV] Addressbook properties updated, sync token: ${newSyncToken}`);
                 });
             }
             return Promise.resolve();
@@ -218,14 +211,14 @@ function proppatch(comm)
         });
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG CardDAV] Error in proppatch: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG CardDAV] Error in proppatch: ${error.message}`);
         comm.setResponseCode(500);
         comm.flushResponse();
     });
 }
 function options(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CardDAV] addressbook.options called`);
+    LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.options called`);
     comm.setHeader("Content-Type", "text/html");
     comm.setHeader("Server", "Fennel-NG");
     comm.setHeader("DAV", "1, 3, extended-mkcol, addressbook, access-control");

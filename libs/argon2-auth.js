@@ -23,10 +23,10 @@ class Argon2Auth {
                 timeCost: 3,         // 3 iterations
                 parallelism: 1,      // 1 thread
             });
-            log.debug('Password hashed with Argon2');
+            LSE_Logger.info('Password hashed with Argon2');
             return hash;
         } catch (error) {
-            log.error('Argon2 hashing failed:', error);
+            LSE_Logger.error('Argon2 hashing failed:', error);
             throw error;
         }
     }
@@ -37,10 +37,10 @@ class Argon2Auth {
     static async verifyPassword(plainPassword, hash) {
         try {
             const isValid = await argon2.verify(hash, plainPassword);
-            log.debug(`Argon2 verification: ${isValid ? 'SUCCESS' : 'FAILED'}`);
+            LSE_Logger.info(`Argon2 verification: ${isValid ? 'SUCCESS' : 'FAILED'}`);
             return isValid;
         } catch (error) {
-            log.error('Argon2 verification failed:', error);
+            LSE_Logger.error('Argon2 verification failed:', error);
             return false;
         }
     }
@@ -56,7 +56,7 @@ class Argon2Auth {
      * Migrate MD5 to Argon2 (for database migration)
      */
     static async migrateMD5ToArgon2(plainPassword) {
-        log.warn('Migrating MD5 to Argon2 - this should only happen during migration');
+        LSE_Logger.warn('Migrating MD5 to Argon2 - this should only happen during migration');
         return await this.hashPassword(plainPassword);
     }
 }

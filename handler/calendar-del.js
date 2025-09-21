@@ -1,10 +1,9 @@
-var LSE_logger = require('LSE_logger');
 var redis = require('../libs/redis');
 var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
 var CALENDARS = require('../libs/db').CALENDARS;
 function del(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.delete called`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.delete called`);
     comm.setHeader("Content-Type", "text/html");
     comm.setHeader("Server", "Fennel-NG");
     comm.setResponseCode(204);
@@ -26,14 +25,14 @@ function del(comm)
         {
             if(calendar === null)
             {
-                LSE_logger.warn(`[Fennel-NG CalDAV] err: could not find calendar`);
+                LSE_Logger.warn(`[Fennel-NG CalDAV] err: could not find calendar`);
             }
             else
             {
                 var calendarId = calendar.id;
                 calendar.destroy().then(function()
                 {
-                    LSE_logger.debug(`[Fennel-NG CalDAV] calendar deleted`);
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar deleted`);
                     redis.del(`fennel:sync:cal:${calendarId}`);
                 })
             }
@@ -47,18 +46,18 @@ function del(comm)
         {
             if(calendarObject === null)
             {
-                LSE_logger.warn(`[Fennel-NG CalDAV] err: could not find calendar object`);
+                LSE_Logger.warn(`[Fennel-NG CalDAV] err: could not find calendar object`);
             }
             else
             {
                 var calendarId = calendarObject.calendarid;
                 calendarObject.destroy().then(function()
                 {
-                    LSE_logger.debug(`[Fennel-NG CalDAV] calendar object deleted`);
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar object deleted`);
                     updateCalendarSyncToken(calendarId).then(function(newSyncToken) {
                         redis.set(`fennel:sync:cal:${calendarId}`, newSyncToken);
                         redis.del(`fennel:etag:event:${eventUri}`);
-                        LSE_logger.info(`[Fennel-NG CalDAV] sync token updated after deletion`);
+                        LSE_Logger.info(`[Fennel-NG CalDAV] sync token updated after deletion`);
                     });
                 })
             }
@@ -79,7 +78,6 @@ function updateCalendarSyncToken(calendarId)
             }).catch(reject);
         }).catch(reject);
     });
-}
 }
 module.exports = {
     del: del

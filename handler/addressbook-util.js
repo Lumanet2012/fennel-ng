@@ -1,4 +1,3 @@
-var LSE_logger = require('LSE_logger');
 function getSupportedReportSet()
 {
     var response = "";

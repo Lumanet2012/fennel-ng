@@ -134,6 +134,24 @@ member: cn=username,ou=users,dc=lumanet,dc=info
 
 ### Option 1: Express Middleware (Recommended)
 
+**For existing production servers, just add these lines:**
+
+```javascript
+// Fennel-NG CalDAV/CardDAV Integration ===============================
+const fennelNG = require('./fennel-ng');
+
+// Initialize Fennel-NG
+fennelNG.initialize().then(() => {
+    console.log('Fennel-NG CalDAV/CardDAV ready');
+}).catch(console.error);
+
+// Add CalDAV/CardDAV middleware to existing app
+app.use(fennelNG.middleware());
+// ====================================================================
+```
+
+**For new applications:**
+
 ```javascript
 // In your main server.js running on port 3000
 const express = require('express');
