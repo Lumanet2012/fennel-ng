@@ -34,6 +34,8 @@ var mysql = require('mysql2/promise');
 var config =
 {
     version_nr: '0.1.0',
+    // Public route prefix for API endpoints
+    public_route_prefix: '/api/fennel-ng',
     port: 8888,
     ip: '10.0.0.11',
     db_name: 'lse_cal',
@@ -61,8 +63,12 @@ var config =
     auth_method: 'ldap',
     auth_method_courier_socket: '/var/run/courier/authdaemon/socket',
     auth_method_htaccess_file: 'demouser.htaccess',
+    // LDAP Setup
     auth_method_ldap_url: 'ldaps://atl-web01.lumanet.info:636',
-    auth_method_ldap_user_base_dn: 'ou=customers,ou=people,dc=lumanet,dc=info',
+    // LDAP Service Account for reading userPassword attributes
+    auth_method_ldap_admin_dn: 'cn=admin,dc=lumanet,dc=info',
+    auth_method_ldap_admin_password: 'Orlando@5204502',
+    auth_method_ldap_user_base_dn: 'ou=people,dc=lumanet,dc=info',
     auth_method_ldap_group_base_dn: 'ou=groups,dc=lumanet,dc=info',
     auth_method_ldap_service_dn: 'cn=fennelng-service,ou=service-accounts,dc=lumanet,dc=info',
     auth_method_ldap_service_password: process.env.LDAP_SERVICE_PASSWORD,

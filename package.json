@@ -30,6 +30,7 @@
     "fast-xml-parser": "^5.2.5",
     "http-auth": "^4.2.1",
     "ioredis": "^5.7.0",
+    "ldapts": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
     "mysql2": "^3.15.0",
