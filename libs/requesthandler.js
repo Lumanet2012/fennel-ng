@@ -1,4 +1,3 @@
-var LSE_logger = require('LSE_logger');
 var principal = require("../handler/principal-main");
 var cal = require("../handler/calendar-main");
 var card = require("../handler/addressbook-main");
@@ -21,7 +20,7 @@ function handlePrincipal(request)
             break;
         default:
             var res = request.getRes();
-            LSE_logger.info(`[Fennel-NG Principal] Request method is unknown: ${method}`);
+            LSE_Logger.info(`[Fennel-NG Principal] Request method is unknown: ${method}`);
             res.writeHead(500);
             res.write(method + " is not implemented yet");
             break;
@@ -61,7 +60,7 @@ function handleCalendar(request)
             break;
         default:
             var res = request.getRes();
-            LSE_logger.info(`[Fennel-NG CalDAV] Request method is unknown: ${method}`);
+            LSE_Logger.info(`[Fennel-NG CalDAV] Request method is unknown: ${method}`);
             res.writeHead(500);
             res.write(method + " is not implemented yet");
             break;
@@ -98,7 +97,7 @@ function handleCard(request)
             break;
         default:
             var res = request.getRes();
-            LSE_logger.info(`[Fennel-NG CardDAV] Request method is unknown: ${method}`);
+            LSE_Logger.info(`[Fennel-NG CardDAV] Request method is unknown: ${method}`);
             res.writeHead(500);
             res.write(method + " is not implemented yet");
             break;

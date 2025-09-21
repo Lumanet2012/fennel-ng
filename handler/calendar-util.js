@@ -1,4 +1,4 @@
-var log = require('../libs/log').log;
+var log = LSE_Logger;
 function getSupportedReportSet(isRoot)
 {
     var response = "";

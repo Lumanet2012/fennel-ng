@@ -1,4 +1,3 @@
-var LSE_logger = require('LSE_logger');
 var redis = require('../libs/redis');
 var VCARDS = require('../libs/db').VCARDS;
 var ADDRESSBOOKS = require('../libs/db').ADDRESSBOOKS;
@@ -8,7 +7,7 @@ module.exports = {
 };
 function move(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CardDAV] addressbook.move called`);
+    LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.move called`);
     comm.setStandardHeaders();
     var vcardUri = comm.getFilenameFromPath(true);
     var sourceAddressbookUri = comm.getPathElement(3);
@@ -25,7 +24,7 @@ function move(comm)
     }
     if(destination.length === 0)
     {
-        LSE_logger.warn(`[Fennel-NG CardDAV] No destination header provided for move operation`);
+        LSE_Logger.warn(`[Fennel-NG CardDAV] No destination header provided for move operation`);
         comm.setResponseCode(400);
         comm.flushResponse();
         return;
@@ -33,7 +32,7 @@ function move(comm)
     var aURL = destination.split("/");
     var targetAddressbookUri = aURL[aURL.length - 2];
     var targetVCardUri = aURL[aURL.length - 1];
-    LSE_logger.debug(`[Fennel-NG CardDAV] Moving vCard: ${vcardUri} from ${sourceAddressbookUri} to ${targetAddressbookUri}`);
+    LSE_Logger.debug(`[Fennel-NG CardDAV] Moving vCard: ${vcardUri} from ${sourceAddressbookUri} to ${targetAddressbookUri}`);
     var sourceAddressbook;
     var targetAddressbook;
     var vcardToMove;
@@ -41,7 +40,7 @@ function move(comm)
     {
         if(!sourceAdb)
         {
-            LSE_logger.warn(`[Fennel-NG CardDAV] Source addressbook not found: ${sourceAddressbookUri}`);
+            LSE_Logger.warn(`[Fennel-NG CardDAV] Source addressbook not found: ${sourceAddressbookUri}`);
             comm.setResponseCode(404);
             comm.flushResponse();
             return Promise.reject(new Error('Source addressbook not found'));
@@ -52,7 +51,7 @@ function move(comm)
     {
         if(!targetAdb)
         {
-            LSE_logger.warn(`[Fennel-NG CardDAV] Target addressbook not found: ${targetAddressbookUri}`);
+            LSE_Logger.warn(`[Fennel-NG CardDAV] Target addressbook not found: ${targetAddressbookUri}`);
             comm.setResponseCode(404);
             comm.flushResponse();
             return Promise.reject(new Error('Target addressbook not found'));
@@ -63,7 +62,7 @@ function move(comm)
     {
         if(!vcard)
         {
-            LSE_logger.warn(`[Fennel-NG CardDAV] VCard not found for move: ${vcardUri}`);
+            LSE_Logger.warn(`[Fennel-NG CardDAV] VCard not found for move: ${vcardUri}`);
             comm.setResponseCode(404);
             comm.flushResponse();
             return Promise.reject(new Error('VCard not found'));
@@ -72,7 +71,7 @@ function move(comm)
         return redis.incrementAddressbookSyncToken(sourceAddressbookUri, username);
     }).then(function(sourceSyncToken)
     {
-        LSE_logger.debug(`[Fennel-NG CardDAV] Updated source sync token: ${sourceSyncToken}`);
+        LSE_Logger.debug(`[Fennel-NG CardDAV] Updated source sync token: ${sourceSyncToken}`);
         return ADDRESSBOOKCHANGES.create({
             uri: vcardToMove.uri,
             synctoken: sourceSyncToken,
@@ -84,7 +83,7 @@ function move(comm)
         return redis.incrementAddressbookSyncToken(targetAddressbookUri, username);
     }).then(function(targetSyncToken)
     {
-        LSE_logger.debug(`[Fennel-NG CardDAV] Updated target sync token: ${targetSyncToken}`);
+        LSE_Logger.debug(`[Fennel-NG CardDAV] Updated target sync token: ${targetSyncToken}`);
         var now = Math.floor(Date.now() / 1000);
         vcardToMove.addressbookid = targetAddressbook.id;
         vcardToMove.uri = targetVCardUri;
@@ -101,7 +100,7 @@ function move(comm)
         });
     }).then(function()
     {
-        LSE_logger.info(`[Fennel-NG CardDAV] Successfully moved vCard: ${vcardUri} from ${sourceAddressbookUri} to ${targetAddressbookUri}`);
+        LSE_Logger.info(`[Fennel-NG CardDAV] Successfully moved vCard: ${vcardUri} from ${sourceAddressbookUri} to ${targetAddressbookUri}`);
         var date = new Date();
         comm.setHeader("ETag", vcardToMove.etag);
         comm.setHeader("Last-Modified", new Date(vcardToMove.lastmodified * 1000).toUTCString());
@@ -113,7 +112,7 @@ function move(comm)
            error.message !== 'Target addressbook not found' && 
            error.message !== 'VCard not found')
         {
-            LSE_logger.error(`[Fennel-NG CardDAV] Error moving vCard: ${error.message}`);
+            LSE_Logger.error(`[Fennel-NG CardDAV] Error moving vCard: ${error.message}`);
             comm.setResponseCode(500);
             comm.flushResponse();
         }

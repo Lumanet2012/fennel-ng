@@ -1,7 +1,6 @@
-var xml = require("libxmljs");
+// XML parsing temporarily disabled
 var moment = require('moment');
 var xh = require("../libs/xmlhelper");
-var LSE_logger = require('LSE_logger');
 var redis = require('../libs/redis');
 var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
 var CALENDARS = require('../libs/db').CALENDARS;
@@ -13,14 +12,14 @@ module.exports = {
 };
 function gett(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.get called`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.get called`);
     comm.setHeader("Content-Type", "text/calendar");
     var eventUri = comm.getFilenameFromPath(false);
     CALENDAROBJECTS.findOne( { where: {uri: eventUri}}).then(function(calendarObject)
     {
         if(calendarObject === null)
         {
-            LSE_logger.warn(`[Fennel-NG CalDAV] err: could not find calendar event`);
+            LSE_Logger.warn(`[Fennel-NG CalDAV] err: could not find calendar event`);
         }
         else
         {
@@ -32,16 +31,11 @@ function gett(comm)
 }
 function propfind(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.propfind called`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.propfind called`);
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.get('/A:propfind/A:prop', {   A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
-    var childs = node.childNodes();
+    var node = handler/calendar-read.js; // XML parsing disabled
+    var childs = []; // XML disabled
     var username = comm.getUser().getUserName();
     if(comm.getUrlElementSize() === 4)
     {
@@ -121,7 +115,7 @@ function handlePropfindForCalendarId(comm, calendarUri)
         comm.appendResBody(xh.getXMLHead());
         if(calendar === null)
         {
-            LSE_logger.warn(`[Fennel-NG CalDAV] Calendar not found: ${calendarUri}`);
+            LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found: ${calendarUri}`);
             comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
             comm.appendResBody("<d:response>");
             comm.appendResBody("<d:href>/cal/" + username + "/" + calendarUri + "/</d:href>");
@@ -134,13 +128,8 @@ function handlePropfindForCalendarId(comm, calendarUri)
         else
         {
             var xmlDoc = xml.parseXml(comm.getReqBody());
-            var node = xmlDoc.get('/A:propfind/A:prop', {   A: 'DAV:',
-                B: "urn:ietf:params:xml:ns:caldav",
-                C: 'http://calendarserver.org/ns/',
-                D: "http://apple.com/ns/ical/",
-                E: "http://me.com/_namespace/"
-            });
-            var childs = node.childNodes();
+    var node = handler/calendar-read.js; // XML parsing disabled
+            var childs = []; // XML disabled
             redis.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
                 var syncToken = cachedSyncToken || calendar.synctoken;
                 var response = returnPropfindElements(comm, calendar, childs, syncToken);
@@ -165,7 +154,7 @@ function handlePropfindForCalendarId(comm, calendarUri)
                 comm.appendResBody("</d:multistatus>");
                 comm.flushResponse();
             }).catch(function(error) {
-                LSE_logger.error(`[Fennel-NG CalDAV] Redis error getting sync token: ${error}`);
+                LSE_Logger.error(`[Fennel-NG CalDAV] Redis error getting sync token: ${error}`);
                 var response = returnPropfindElements(comm, calendar, childs, calendar.synctoken);
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
                 comm.appendResBody("<d:response><d:href>" + comm.getURL() + "</d:href>");
@@ -190,12 +179,7 @@ function handlePropfindForUser(comm)
     comm.appendResBody(xh.getXMLHead());
     var response = "";
     var xmlDoc = xml.parseXml(comm.getReqBody());
-    var nodeChecksum = xmlDoc.get('/A:propfind/A:prop/C:checksum-versions', {   A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/calendar-read.js; // XML parsing disabled
     if(nodeChecksum !== undefined)
     {
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">";
@@ -207,13 +191,8 @@ function handlePropfindForUser(comm)
     else
     {
         var xmlDoc = xml.parseXml(comm.getReqBody());
-        var node = xmlDoc.get('/A:propfind/A:prop', {   A: 'DAV:',
-            B: "urn:ietf:params:xml:ns:caldav",
-            C: 'http://calendarserver.org/ns/',
-            D: "http://apple.com/ns/ical/",
-            E: "http://me.com/_namespace/"
-        });
-        var childs = node.childNodes();
+    var node = handler/calendar-read.js; // XML parsing disabled
+        var childs = []; // XML disabled
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">";
         response += getCalendarRootNodeResponse(comm, childs);
         var username = comm.getUser().getUserName();
@@ -366,7 +345,7 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
             case 'getcontenttype':
                 break;
             default:
-                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] CAL-PF: not handled: ${name}`);
+                if(name != 'text') LSE_Logger.warn(`[Fennel-NG CalDAV] CAL-PF: not handled: ${name}`);
                 break;
         }
     }
@@ -384,7 +363,7 @@ function returnCalendar(comm, calendar, childs)
         var syncToken = cachedSyncToken || calendar.synctoken;
         response += returnPropfindElements(comm, calendar, childs, syncToken);
     }).catch(function(error) {
-        LSE_logger.error(`[Fennel-NG CalDAV] Redis error in returnCalendar: ${error}`);
+        LSE_Logger.error(`[Fennel-NG CalDAV] Redis error in returnCalendar: ${error}`);
         response += returnPropfindElements(comm, calendar, childs, calendar.synctoken);
     });
     response += "			</d:prop>";
@@ -429,7 +408,7 @@ function getCalendarRootNodeResponse(comm, childs)
 }
 function report(comm)
 {
-    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.report called`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.report called`);
     comm.setStandardHeaders();
     comm.setResponseCode(207);
     comm.appendResBody(xh.getXMLHead());
@@ -449,7 +428,7 @@ function report(comm)
             handleReportCalendarQuery(comm, xmlDoc);
             break;
         default:
-            if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
+            if(name != 'text') LSE_Logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
             break;
     }
 }
@@ -461,19 +440,13 @@ function handleReportCalendarQuery(comm, xmlDoc)
     var filter = {calendarid: null};
     CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar) {
         if (!calendar) {
-            LSE_logger.warn(`[Fennel-NG CalDAV] Calendar not found for query: ${calendarUri}`);
+            LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found for query: ${calendarUri}`);
             comm.setResponseCode(404);
             comm.flushResponse();
             return;
         }
         filter.calendarid = calendar.id;
-        var nodeFilter = xmlDoc.get('/B:calendar-query/B:filter/B:comp-filter[@name = "VCALENDAR"]/B:comp-filter[@name = "VEVENT"]/B:time-range', {
-            A: 'DAV:',
-            B: "urn:ietf:params:xml:ns:caldav",
-            C: 'http://calendarserver.org/ns/',
-            D: "http://apple.com/ns/ical/",
-            E: "http://me.com/_namespace/"
-        });
+    var node = handler/calendar-read.js; // XML parsing disabled
         if(nodeFilter !== undefined)
         {
             var attrs = nodeFilter.attrs();
@@ -499,13 +472,7 @@ function handleReportCalendarQuery(comm, xmlDoc)
         CALENDAROBJECTS.findAndCountAll( { where: filter}
             ).then(function(result)
             {
-                var nodeProp = xmlDoc.get('/B:calendar-query/A:prop', {
-                    A: 'DAV:',
-                    B: "urn:ietf:params:xml:ns:caldav",
-                    C: 'http://calendarserver.org/ns/',
-                    D: "http://apple.com/ns/ical/",
-                    E: "http://me.com/_namespace/"
-                });
+    var node = handler/calendar-read.js; // XML parsing disabled
                 var response = "";
                 var nodeProps = nodeProp.childNodes();
                 var len = nodeProps.length;
@@ -533,7 +500,7 @@ function handleReportCalendarQuery(comm, xmlDoc)
                                 response += "<cal:calendar-data>" + calendarObject.calendardata.toString() + "</cal:calendar-data>";
                                 break;
                             default:
-                                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
+                                if(name != 'text') LSE_Logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                                 break;
                         }
                     }
@@ -551,13 +518,7 @@ function handleReportSyncCollection(comm)
 {
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.get('/A:sync-collection', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/calendar-read.js; // XML parsing disabled
     if(node != undefined)
     {
         var calendarUri = comm.getPathElement(3);
@@ -566,7 +527,7 @@ function handleReportSyncCollection(comm)
         CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
         {
             if (!calendar) {
-                LSE_logger.warn(`[Fennel-NG CalDAV] Calendar not found for sync: ${calendarUri}`);
+                LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found for sync: ${calendarUri}`);
                 comm.setResponseCode(404);
                 comm.flushResponse();
                 return;
@@ -579,7 +540,7 @@ function handleReportSyncCollection(comm)
                 for (var j=0; j < result.count; ++j)
                 {
                     var calendarObject = result.rows[j];
-                    var childs = node.childNodes();
+                    var childs = []; // XML disabled
                     var len = childs.length;
                     for (var i=0; i < len; ++i)
                     {
@@ -593,7 +554,7 @@ function handleReportSyncCollection(comm)
                                 response += handleReportCalendarProp(comm, child, calendar, calendarObject);
                                 break;
                             default:
-                                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
+                                if(name != 'text') LSE_Logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                                 break;
                         }
                     }
@@ -606,7 +567,7 @@ function handleReportSyncCollection(comm)
                     comm.appendResBody("</d:multistatus>");
                     comm.flushResponse();
                 }).catch(function(error) {
-                    LSE_logger.error(`[Fennel-NG CalDAV] Redis error in sync collection: ${error}`);
+                    LSE_Logger.error(`[Fennel-NG CalDAV] Redis error in sync collection: ${error}`);
                     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">\r\n");
                     comm.appendResBody(response);
                     comm.appendResBody("<d:sync-token>http://swordlord.org/ns/sync/" + calendar.synctoken + "</d:sync-token>");
@@ -625,7 +586,7 @@ function handleReportCalendarProp(comm, node, calendar, calendarObject)
     response += "<d:response>";
     response += "<d:href>" + reqUrl + calendarObject.uri + "</d:href>";
     response += "<d:propstat><d:prop>";
-    var childs = node.childNodes();
+    var childs = []; // XML disabled
     var len = childs.length;
     for (var i=0; i < len; ++i)
     {
@@ -640,7 +601,7 @@ function handleReportCalendarProp(comm, node, calendar, calendarObject)
                 response += "<d:getcontenttype>text/calendar; charset=utf-8; component=" + calendarObject.componenttype + "</d:getcontenttype>";
                 break;
             default:
-                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
+                if(name != 'text') LSE_Logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                 break;
         }
     }
@@ -654,16 +615,10 @@ function handleReportCalendarMultiget(comm)
 {
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.get('/B:calendar-multiget', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/calendar-read.js; // XML parsing disabled
     if(node != undefined)
     {
-        var childs = node.childNodes();
+        var childs = []; // XML disabled
         var arrHrefs = [];
         var len = childs.length;
         for (var i=0; i < len; ++i)
@@ -678,7 +633,7 @@ function handleReportCalendarMultiget(comm)
                     arrHrefs.push(parseHrefToEventUri(child.text()));
                     break;
                 default:
-                    if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
+                    if(name != 'text') LSE_Logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                     break;
             }
         }

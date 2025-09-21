@@ -8,7 +8,7 @@
  **
  -----------------------------------------------------------------------------*/
 
-var log = require('../libs/log').log;
+var log = LSE_Logger;
 
 // Exporting.
 module.exports = {

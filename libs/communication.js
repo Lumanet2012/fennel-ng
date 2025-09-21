@@ -1,4 +1,3 @@
-var LSE_logger = require('LSE_logger');
 var config = require('../config').config;
 var redis = require('./redis');
 var userLib = require('./user');
@@ -63,10 +62,10 @@ comm.prototype.initializeSession = function()
     }
     redis.setSessionData(this.sessionId, sessionData, 3600).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Session] Session initialized for user: ${sessionData.username}`);
+        LSE_Logger.debug(`[Fennel-NG Session] Session initialized for user: ${sessionData.username}`);
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Session] Failed to initialize session: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Session] Failed to initialize session: ${error.message}`);
     });
 };
 comm.prototype.updateSession = function()
@@ -85,10 +84,10 @@ comm.prototype.updateSession = function()
         return Promise.resolve();
     }).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Session] Session updated for: ${this.sessionId}`);
+        LSE_Logger.debug(`[Fennel-NG Session] Session updated for: ${this.sessionId}`);
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Session] Failed to update session: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Session] Failed to update session: ${error.message}`);
     });
 };
 comm.prototype.destroySession = function()
@@ -99,16 +98,16 @@ comm.prototype.destroySession = function()
     }
     return redis.deleteSessionData(this.sessionId).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Session] Session destroyed: ${this.sessionId}`);
+        LSE_Logger.debug(`[Fennel-NG Session] Session destroyed: ${this.sessionId}`);
         this.sessionId = null;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Session] Failed to destroy session: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Session] Failed to destroy session: ${error.message}`);
     });
 };
 comm.prototype.pushOptionsResponse = function()
 {
-    LSE_logger.debug(`[Fennel-NG Comm] pushOptionsResponse called`);
+    LSE_Logger.debug(`[Fennel-NG Comm] pushOptionsResponse called`);
     this.setHeader("Content-Type", "text/html");
     this.setHeader("Server", "Fennel-NG");
     this.setDAVHeaders();
@@ -118,7 +117,7 @@ comm.prototype.pushOptionsResponse = function()
 };
 comm.prototype.setResponseCode = function(responseCode)
 {
-    LSE_logger.debug(`[Fennel-NG Comm] Setting response code: ${responseCode}`);
+    LSE_Logger.debug(`[Fennel-NG Comm] Setting response code: ${responseCode}`);
     this.res.writeHead(responseCode);
 };
 comm.prototype.flushResponse = function()
@@ -129,7 +128,7 @@ comm.prototype.flushResponse = function()
         response = pd.xml(this.resBody);
     }
     this.updateSession();
-    LSE_logger.debug(`[Fennel-NG Comm] Returning response length: ${response.length}`);
+    LSE_Logger.debug(`[Fennel-NG Comm] Returning response length: ${response.length}`);
     this.res.write(response);
     this.res.end();
 };
@@ -183,7 +182,7 @@ comm.prototype.checkPermission = function(strURL, strMethod)
 {
     var s = strURL.substr(1).split("/").filter(String).join(":") + ":" + strMethod.toLowerCase();
     var ret = this.authority.check(s);
-    LSE_logger.debug(`[Fennel-NG Comm] Checking authority for user '${this.getUser().getUserName()}' for '${s}' with result: ${ret}`);
+    LSE_Logger.debug(`[Fennel-NG Comm] Checking authority for user '${this.getUser().getUserName()}' for '${s}' with result: ${ret}`);
     return ret;
 };
 comm.prototype.getReq = function()
@@ -211,7 +210,7 @@ comm.prototype.getURLAsArray = function()
     var aUrl = url.parse(this.req.url).pathname.split("/");
     if(aUrl.length <= 0)
     {
-        LSE_logger.warn(`[Fennel-NG Comm] Something evil happened in comm.getUrlAsArray!`);
+        LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in comm.getUrlAsArray!`);
         return undefined;
     }
     return aUrl;
@@ -221,7 +220,7 @@ comm.prototype.getFilenameFromPath = function(removeEnding)
     var aUrl = url.parse(this.req.url).pathname.split("/");
     if(aUrl.length <= 0)
     {
-        LSE_logger.warn(`[Fennel-NG Comm] Something evil happened in request.getFilenameFromPath`);
+        LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in request.getFilenameFromPath`);
         return undefined;
     }
     var filename = aUrl[aUrl.length - 1];
@@ -240,7 +239,7 @@ comm.prototype.getLastPathElement = function()
     var aUrl = url.parse(this.req.url).pathname.split("/");
     if(aUrl.length <= 0)
     {
-        LSE_logger.warn(`[Fennel-NG Comm] Something evil happened in request.getLastPathElement`);
+        LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in request.getLastPathElement`);
         return undefined;
     }
     return aUrl[aUrl.length - 2];
@@ -250,7 +249,7 @@ comm.prototype.getPathElement = function(position)
     var aUrl = url.parse(this.req.url).pathname.split("/");
     if(aUrl.length <= 0)
     {
-        LSE_logger.warn(`[Fennel-NG Comm] Something evil happened in request.getPathElement`);
+        LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in request.getPathElement`);
         return undefined;
     }
     return aUrl[position];
@@ -328,12 +327,12 @@ comm.prototype.logRequest = function()
         contentLength: this.req.headers['content-length'] || 0,
         timestamp: new Date().toISOString()
     };
-    LSE_logger.info(`[Fennel-NG Request] ${logData.method} ${logData.url} - User: ${logData.username} - Auth: ${logData.authMethod}`);
+    LSE_Logger.info(`[Fennel-NG Request] ${logData.method} ${logData.url} - User: ${logData.username} - Auth: ${logData.authMethod}`);
     if(this.sessionId)
     {
         redis.setSessionData(this.sessionId + '_lastRequest', logData, 3600).catch(function(error)
         {
-            LSE_logger.error(`[Fennel-NG Comm] Failed to log request data: ${error.message}`);
+            LSE_Logger.error(`[Fennel-NG Comm] Failed to log request data: ${error.message}`);
         });
     }
 };

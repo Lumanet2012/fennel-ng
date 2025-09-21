@@ -1,5 +1,4 @@
 var Redis = require('ioredis');
-var LSE_logger = require('LSE_logger');
 var config = require('../config').config;
 var redis;
 var isConnected = false;
@@ -25,21 +24,21 @@ function initializeRedis()
     redis.on('connect', function()
     {
         isConnected = true;
-        LSE_logger.info(`[Fennel-NG Redis] Connected to Redis at ${redisConfig.host}:${redisConfig.port}`);
+        LSE_Logger.info(`[Fennel-NG Redis] Connected to Redis at ${redisConfig.host}:${redisConfig.port}`);
     });
     redis.on('error', function(error)
     {
         isConnected = false;
-        LSE_logger.error(`[Fennel-NG Redis] Redis connection error: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Redis connection error: ${error.message}`);
     });
     redis.on('close', function()
     {
         isConnected = false;
-        LSE_logger.warn(`[Fennel-NG Redis] Redis connection closed`);
+        LSE_Logger.warn(`[Fennel-NG Redis] Redis connection closed`);
     });
     redis.on('reconnecting', function()
     {
-        LSE_logger.info(`[Fennel-NG Redis] Reconnecting to Redis...`);
+        LSE_Logger.info(`[Fennel-NG Redis] Reconnecting to Redis...`);
     });
     return redis;
 }
@@ -51,12 +50,12 @@ function getCalendarSyncToken(calendarUri, username)
     {
         if(result)
         {
-            LSE_logger.debug(`[Fennel-NG Redis] Retrieved calendar sync token: ${key} = ${result}`);
+            LSE_Logger.debug(`[Fennel-NG Redis] Retrieved calendar sync token: ${key} = ${result}`);
         }
         return result;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error getting calendar sync token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error getting calendar sync token: ${error.message}`);
         return null;
     });
 }
@@ -66,11 +65,11 @@ function setCalendarSyncToken(calendarUri, username, syncToken)
     var key = `caldav:calendar:sync:${username}:${calendarUri}`;
     return client.set(key, syncToken, 'EX', 86400).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Redis] Set calendar sync token: ${key} = ${syncToken}`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Set calendar sync token: ${key} = ${syncToken}`);
         return syncToken;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error setting calendar sync token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error setting calendar sync token: ${error.message}`);
         return syncToken;
     });
 }
@@ -81,11 +80,11 @@ function incrementCalendarSyncToken(calendarUri, username)
     return client.incr(key).then(function(newToken)
     {
         client.expire(key, 86400);
-        LSE_logger.debug(`[Fennel-NG Redis] Incremented calendar sync token: ${key} = ${newToken}`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Incremented calendar sync token: ${key} = ${newToken}`);
         return newToken;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error incrementing calendar sync token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error incrementing calendar sync token: ${error.message}`);
         return Math.floor(Date.now() / 1000);
     });
 }
@@ -97,12 +96,12 @@ function getAddressbookSyncToken(addressbookUri, username)
     {
         if(result)
         {
-            LSE_logger.debug(`[Fennel-NG Redis] Retrieved addressbook sync token: ${key} = ${result}`);
+            LSE_Logger.debug(`[Fennel-NG Redis] Retrieved addressbook sync token: ${key} = ${result}`);
         }
         return result;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error getting addressbook sync token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error getting addressbook sync token: ${error.message}`);
         return null;
     });
 }
@@ -112,11 +111,11 @@ function setAddressbookSyncToken(addressbookUri, username, syncToken)
     var key = `carddav:addressbook:sync:${username}:${addressbookUri}`;
     return client.set(key, syncToken, 'EX', 86400).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Redis] Set addressbook sync token: ${key} = ${syncToken}`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Set addressbook sync token: ${key} = ${syncToken}`);
         return syncToken;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error setting addressbook sync token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error setting addressbook sync token: ${error.message}`);
         return syncToken;
     });
 }
@@ -127,11 +126,11 @@ function incrementAddressbookSyncToken(addressbookUri, username)
     return client.incr(key).then(function(newToken)
     {
         client.expire(key, 86400);
-        LSE_logger.debug(`[Fennel-NG Redis] Incremented addressbook sync token: ${key} = ${newToken}`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Incremented addressbook sync token: ${key} = ${newToken}`);
         return newToken;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error incrementing addressbook sync token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error incrementing addressbook sync token: ${error.message}`);
         return Math.floor(Date.now() / 1000);
     });
 }
@@ -141,10 +140,10 @@ function deleteAddressbookSyncToken(addressbookUri, username)
     var key = `carddav:addressbook:sync:${username}:${addressbookUri}`;
     return client.del(key).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Redis] Deleted addressbook sync token: ${key}`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Deleted addressbook sync token: ${key}`);
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error deleting addressbook sync token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error deleting addressbook sync token: ${error.message}`);
     });
 }
 function cacheJWTToken(token, payload, expirySeconds)
@@ -158,11 +157,11 @@ function cacheJWTToken(token, payload, expirySeconds)
     var ttl = expirySeconds || (config.jwt_expiry_minutes * 60 - 300);
     return client.setex(key, ttl, JSON.stringify(cacheData)).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Redis] Cached JWT token for ${ttl} seconds`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Cached JWT token for ${ttl} seconds`);
         return payload;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error caching JWT token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error caching JWT token: ${error.message}`);
         return payload;
     });
 }
@@ -175,13 +174,13 @@ function getJWTToken(token)
         if(result)
         {
             var cacheData = JSON.parse(result);
-            LSE_logger.debug(`[Fennel-NG Redis] Retrieved cached JWT token`);
+            LSE_Logger.debug(`[Fennel-NG Redis] Retrieved cached JWT token`);
             return cacheData.payload;
         }
         return null;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error getting JWT token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error getting JWT token: ${error.message}`);
         return null;
     });
 }
@@ -191,10 +190,10 @@ function blacklistJWTToken(token, expirySeconds)
     var key = `jwt:blacklist:${token}`;
     return client.setex(key, expirySeconds || 86400, '1').then(function()
     {
-        LSE_logger.info(`[Fennel-NG Redis] Blacklisted JWT token`);
+        LSE_Logger.info(`[Fennel-NG Redis] Blacklisted JWT token`);
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error blacklisting JWT token: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error blacklisting JWT token: ${error.message}`);
     });
 }
 function isJWTTokenBlacklisted(token)
@@ -206,7 +205,7 @@ function isJWTTokenBlacklisted(token)
         return exists === 1;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error checking JWT blacklist: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error checking JWT blacklist: ${error.message}`);
         return false;
     });
 }
@@ -220,11 +219,11 @@ function cacheLDAPUser(username, userData, expirySeconds)
     };
     return client.setex(key, expirySeconds || 300, JSON.stringify(cacheData)).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Redis] Cached LDAP user: ${username} for ${expirySeconds || 300} seconds`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Cached LDAP user: ${username} for ${expirySeconds || 300} seconds`);
         return userData;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error caching LDAP user: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error caching LDAP user: ${error.message}`);
         return userData;
     });
 }
@@ -237,13 +236,13 @@ function getLDAPUser(username)
         if(result)
         {
             var cacheData = JSON.parse(result);
-            LSE_logger.debug(`[Fennel-NG Redis] Retrieved cached LDAP user: ${username}`);
+            LSE_Logger.debug(`[Fennel-NG Redis] Retrieved cached LDAP user: ${username}`);
             return cacheData.user;
         }
         return null;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error getting LDAP user: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error getting LDAP user: ${error.message}`);
         return null;
     });
 }
@@ -253,11 +252,11 @@ function setSessionData(sessionId, sessionData, expirySeconds)
     var key = `session:${sessionId}`;
     return client.setex(key, expirySeconds || 3600, JSON.stringify(sessionData)).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Redis] Set session data: ${sessionId}`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Set session data: ${sessionId}`);
         return sessionData;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error setting session data: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error setting session data: ${error.message}`);
         return sessionData;
     });
 }
@@ -269,13 +268,13 @@ function getSessionData(sessionId)
     {
         if(result)
         {
-            LSE_logger.debug(`[Fennel-NG Redis] Retrieved session data: ${sessionId}`);
+            LSE_Logger.debug(`[Fennel-NG Redis] Retrieved session data: ${sessionId}`);
             return JSON.parse(result);
         }
         return null;
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error getting session data: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error getting session data: ${error.message}`);
         return null;
     });
 }
@@ -285,10 +284,10 @@ function deleteSessionData(sessionId)
     var key = `session:${sessionId}`;
     return client.del(key).then(function()
     {
-        LSE_logger.debug(`[Fennel-NG Redis] Deleted session data: ${sessionId}`);
+        LSE_Logger.debug(`[Fennel-NG Redis] Deleted session data: ${sessionId}`);
     }).catch(function(error)
     {
-        LSE_logger.error(`[Fennel-NG Redis] Error deleting session data: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Redis] Error deleting session data: ${error.message}`);
     });
 }
 function healthCheck()

@@ -1,4 +1,3 @@
-var LSE_logger = require('LSE_logger');
 var config = require('../config').config;
 var pool = require('../config').fennelNGPool;
 var Sequelize = require('sequelize');
@@ -8,7 +7,7 @@ var sequelize = new Sequelize(config.db_name, config.db_uid, config.db_pwd, {
     dialect: 'mysql',
     logging: function(info) { 
         if(config.db_logging) {
-            LSE_logger.debug(`[Fennel-NG DB] ${info}`);
+            LSE_Logger.debug(`[Fennel-NG DB] ${info}`);
         }
     },
     pool: {
@@ -150,20 +149,20 @@ ADDRESSBOOKS.hasMany(ADDRESSBOOKCHANGES, { foreignKey: 'addressbookid', sourceKe
 async function testDatabaseConnection() {
     try {
         await sequelize.authenticate();
-        LSE_logger.info('[Fennel-NG DB] MySQL connection established successfully');
+        LSE_Logger.info('[Fennel-NG DB] MySQL connection established successfully');
         return true;
     } catch (error) {
-        LSE_logger.error(`[Fennel-NG DB] Unable to connect to MySQL: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DB] Unable to connect to MySQL: ${error.message}`);
         return false;
     }
 }
 async function syncDatabase() {
     try {
         await sequelize.sync({ alter: false });
-        LSE_logger.info('[Fennel-NG DB] Database synchronized successfully');
+        LSE_Logger.info('[Fennel-NG DB] Database synchronized successfully');
         return true;
     } catch (error) {
-        LSE_logger.error(`[Fennel-NG DB] Database synchronization failed: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DB] Database synchronization failed: ${error.message}`);
         return false;
     }
 }
@@ -175,7 +174,7 @@ async function executeRawQuery(query, params) {
         });
         return results;
     } catch (error) {
-        LSE_logger.error(`[Fennel-NG DB] Raw query failed: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DB] Raw query failed: ${error.message}`);
         throw error;
     }
 }
@@ -187,7 +186,7 @@ async function executeRawUpdate(query, params) {
         });
         return metadata;
     } catch (error) {
-        LSE_logger.error(`[Fennel-NG DB] Raw update failed: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DB] Raw update failed: ${error.message}`);
         throw error;
     }
 }
@@ -198,7 +197,7 @@ async function getUserPrincipal(username) {
         });
         return principal;
     } catch (error) {
-        LSE_logger.error(`[Fennel-NG DB] Error getting user principal: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DB] Error getting user principal: ${error.message}`);
         return null;
     }
 }
@@ -209,10 +208,10 @@ async function createUserPrincipal(username, email, displayname) {
             email: email || null,
             displayname: displayname || username
         });
-        LSE_logger.info(`[Fennel-NG DB] Created principal for user: ${username}`);
+        LSE_Logger.info(`[Fennel-NG DB] Created principal for user: ${username}`);
         return principal;
     } catch (error) {
-        LSE_logger.error(`[Fennel-NG DB] Error creating user principal: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DB] Error creating user principal: ${error.message}`);
         return null;
     }
 }

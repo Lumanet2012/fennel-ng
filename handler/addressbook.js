@@ -8,9 +8,9 @@
  **
  -----------------------------------------------------------------------------*/
 
-var xml = require("libxmljs");
+// XML parsing temporarily disabled
 var xh = require("../libs/xmlhelper");
-var log = require('../libs/log').log;
+var log = LSE_Logger;
 var VCARD = require('../libs/db').VCARD;
 var ADB = require('../libs/db').ADB;
 
@@ -28,7 +28,7 @@ module.exports = {
 
 function propfind(comm)
 {
-    log.debug("addressbook.propfind called");
+    LSE_Logger.info("addressbook.propfind called");
 
     comm.setStandardHeaders();
     comm.setDAVHeaders();
@@ -41,13 +41,8 @@ function propfind(comm)
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
 
-    var node = xmlDoc.get('/A:propfind/A:prop', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://me.com/_namespace/"
-    });
-    var childs = node.childNodes();
+    var node = handler/addressbook.js; // XML parsing disabled
+    var childs = []; // XML disabled
 
     var isRoot = true;
 
@@ -86,7 +81,7 @@ function propfind(comm)
                     {
                         adb.save().then(function()
                         {
-                            log.warn('adb saved');
+                            LSE_Logger.warn('adb saved');
                         });
                     }
 
@@ -208,7 +203,7 @@ function returnPropfindRootProps(comm, nodes, adb, rsVCARD)
                 break;
 
             default:
-                if(name != 'text') log.warn("CARD-PropFind Root: not handled: " + name);
+                if(name != 'text') LSE_Logger.warn("CARD-PropFind Root: not handled: " + name);
                 break;
         }
     }
@@ -322,7 +317,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 break;
 
             default:
-                if(name != 'text') log.warn("CARD-PropFind: not handled: " + name);
+                if(name != 'text') LSE_Logger.warn("CARD-PropFind: not handled: " + name);
                 break;
         }
     }
@@ -343,7 +338,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
 
 function del(comm)
 {
-    log.debug("addressbook.delete called");
+    LSE_Logger.info("addressbook.delete called");
 
     comm.setHeader("Content-Type", "text/html");
     comm.setHeader("Server", "Fennel");
@@ -351,8 +346,8 @@ function del(comm)
     // TODO: actually no. respond according to delete status or error while trying to delete
     comm.setResponseCode(204);
 
-    log.debug("URLAsArray: " + comm.getURLAsArray());
-    log.debug("URLElementSize: " + comm.getUrlElementSize());
+    LSE_Logger.info("URLAsArray: " + comm.getURLAsArray());
+    LSE_Logger.info("URLElementSize: " + comm.getUrlElementSize());
 
     var isRoot = true;
 
@@ -375,13 +370,13 @@ function del(comm)
         {
             if(adb === null)
             {
-                log.warn('err: could not find addressbook with ID: ' + addressbookId);
+                LSE_Logger.warn('err: could not find addressbook with ID: ' + addressbookId);
             }
             else
             {
                 adb.destroy().then(function()
                 {
-                    log.debug('addressbook deleted');
+                    LSE_Logger.info('addressbook deleted');
                 })
             }
 
@@ -396,13 +391,13 @@ function del(comm)
         {
             if(vcard === null)
             {
-                log.warn('err: could not find vcard: ' + vcardId);
+                LSE_Logger.warn('err: could not find vcard: ' + vcardId);
             }
             else
             {
                 vcard.destroy().then(function()
                 {
-                    log.debug('vcard deleted');
+                    LSE_Logger.info('vcard deleted');
                 })
             }
 
@@ -413,7 +408,7 @@ function del(comm)
 
 function gett(comm)
 {
-    log.debug("calendar.get called");
+    LSE_Logger.info("calendar.get called");
 
     var res = comm.getRes();
     res.setHeader("Content-Type", "text/vcard; charset=utf-8");
@@ -423,7 +418,7 @@ function gett(comm)
     {
         if(vcard === null)
         {
-            log.warn('err: could not find vcard');
+            LSE_Logger.warn('err: could not find vcard');
         }
         else
         {
@@ -444,7 +439,7 @@ function put(comm)
     // PUT /addressbooks/a3298271331/fruux-merged/68a386ea-be30-4922-a407-890b56bf944d.vcf HTTP/1.1
     // X-ADDRESSBOOKSERVER-KIND:group -> is_group === true
 
-    log.debug("addressbook.put called");
+    LSE_Logger.info("addressbook.put called");
 
     var vcardId = comm.getFilenameFromPath(true);
 
@@ -474,18 +469,18 @@ function put(comm)
             {
                 if(created)
                 {
-                    log.debug('Created VCARD: ' + JSON.stringify(vcard, null, 4));
+                    LSE_Logger.info('Created VCARD: ' + JSON.stringify(vcard, null, 4));
                 }
                 else
                 {
                     vcard.content = comm.getReqBody();
                     vcard.is_group = isGroup;
-                    log.debug('Loaded VCARD: ' + JSON.stringify(vcard, null, 4));
+                    LSE_Logger.info('Loaded VCARD: ' + JSON.stringify(vcard, null, 4));
                 }
 
                 vcard.save().then(function()
                 {
-                    log.info('vcard updated');
+                    LSE_Logger.info('vcard updated');
 
                     // update addressbook collection
                     /*
@@ -495,7 +490,7 @@ function put(comm)
                         {
                             cal.increment('synctoken', { by: 1 }).then(function()
                             {
-                                log.info('synctoken on cal updated');
+                                LSE_Logger.info('synctoken on cal updated');
                             });
                         }
                     });
@@ -516,7 +511,7 @@ function put(comm)
 function move(comm)
 {
 
-    log.debug("calendar.move called");
+    LSE_Logger.info("calendar.move called");
 /*
     comm.setStandardHeaders(comm);
 
@@ -544,14 +539,14 @@ function move(comm)
         {
             if(ics === null)
             {
-                log.warn('ics not found');
+                LSE_Logger.warn('ics not found');
             }
             else
             {
                 ics.calendarId = newCal;
                 ics.save().then(function()
                 {
-                    log.warn('ics updated');
+                    LSE_Logger.warn('ics updated');
                 });
             }
         });
@@ -599,7 +594,7 @@ function  getCurrentUserPrivilegeSet()
 
 function options(comm)
 {
-    log.debug("principal.options called");
+    LSE_Logger.info("principal.options called");
 
     comm.pushOptionsResponse();
 }
@@ -619,7 +614,7 @@ function report(comm)
      </B:addressbook-multiget><?xml version="1.0" encoding="utf-8"?>
     */
 
-    log.debug("addressbook.report called");
+    LSE_Logger.info("addressbook.report called");
 
     comm.setStandardHeaders();
 
@@ -639,7 +634,7 @@ function report(comm)
             break;
 
         default:
-            if(name != 'text') log.warn("P-R: not handled: " + name);
+            if(name != 'text') LSE_Logger.warn("P-R: not handled: " + name);
             comm.flushResponse();
             break;
     }
@@ -650,17 +645,11 @@ function handleReportAdressbookMultiget(comm)
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
 
-    var node = xmlDoc.get('/B:addressbook-multiget', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:carddav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/addressbook.js; // XML parsing disabled
 
     if(node != undefined)
     {
-        var childs = node.childNodes();
+        var childs = []; // XML disabled
 
         var arrHrefs = [];
 
@@ -679,7 +668,7 @@ function handleReportAdressbookMultiget(comm)
                     break;
 
                 default:
-                    if(name != 'text') log.warn("ADB-R: not handled: " + name);
+                    if(name != 'text') LSE_Logger.warn("ADB-R: not handled: " + name);
                     break;
             }
         }
@@ -735,7 +724,7 @@ function handleReportHrefs(comm, arrVCARDIds)
 
 function proppatch(comm)
 {
-    log.debug("addressbook.proppatch called");
+    LSE_Logger.info("addressbook.proppatch called");
 
     /*
     comm.setStandardHeaders();
@@ -747,14 +736,8 @@ function proppatch(comm)
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
 
-    var node = xmlDoc.get('/A:propertyupdate/A:set/A:prop', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
-    var childs = node.childNodes();
+    var node = handler/addressbook.js; // XML parsing disabled
+    var childs = []; // XML disabled
 
     var isRoot = true;
 
@@ -778,7 +761,7 @@ function proppatch(comm)
         {
             if(cal === null)
             {
-                log.warn('Calendar not found');
+                LSE_Logger.warn('Calendar not found');
 
                 var len = childs.length;
                 for (var i=0; i < len; ++i)
@@ -789,16 +772,16 @@ function proppatch(comm)
                     {
                         case 'default-alarm-vevent-date':
                             response += "<cal:default-alarm-vevent-date/>";
-                            log.info("proppatch default-alarm-vevent-date not handled yet");
+                            LSE_Logger.info("proppatch default-alarm-vevent-date not handled yet");
                             break;
 
                         case 'default-alarm-vevent-datetime':
                             response += "<cal:default-alarm-vevent-datetime/>";
-                            log.info("proppatch default-alarm-vevent-datetime not handled yet");
+                            LSE_Logger.info("proppatch default-alarm-vevent-datetime not handled yet");
                             break;
 
                         default:
-                            if(name != 'text') log.warn("CAL-PP: not handled: " + name);
+                            if(name != 'text') LSE_Logger.warn("CAL-PP: not handled: " + name);
                             break;
                     }
                 }
@@ -826,12 +809,12 @@ function proppatch(comm)
                     {
                         case 'default-alarm-vevent-date':
                             response += "<cal:default-alarm-vevent-date/>";
-                            log.info("proppatch default-alarm-vevent-date not handled yet");
+                            LSE_Logger.info("proppatch default-alarm-vevent-date not handled yet");
                             break;
 
                         case 'default-alarm-vevent-datetime':
                             response += "<cal:default-alarm-vevent-datetime/>";
-                            log.info("proppatch default-alarm-vevent-datetime not handled yet");
+                            LSE_Logger.info("proppatch default-alarm-vevent-datetime not handled yet");
                             break;
 
                         case 'displayname':
@@ -855,14 +838,14 @@ function proppatch(comm)
                             break;
 
                         default:
-                            if(name != 'text') log.warn("CAL-PP: not handled: " + name);
+                            if(name != 'text') LSE_Logger.warn("CAL-PP: not handled: " + name);
                             break;
                     }
                 }
 
                 cal.save().then(function()
                 {
-                    log.warn('cal saved');
+                    LSE_Logger.warn('cal saved');
                 });
 
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">\r\n");

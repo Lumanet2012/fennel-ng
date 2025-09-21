@@ -1,6 +1,5 @@
-var xml = require("libxmljs");
+// XML parsing temporarily disabled
 var xh = require("../libs/xmlhelper");
-var LSE_logger = require('LSE_logger');
 var principalUtil = require('./principal-util');
 module.exports = {
     propfind: propfind,
@@ -8,21 +7,15 @@ module.exports = {
 };
 function propfind(comm)
 {
-    LSE_logger.debug(`[Fennel-NG Principal] principal.propfind called`);
+    LSE_Logger.debug(`[Fennel-NG Principal] principal.propfind called`);
     comm.setStandardHeaders();
     comm.setDAVHeaders();
     comm.setResponseCode(207);
     comm.appendResBody(xh.getXMLHead());
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.get('/A:propfind/A:prop', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
-    var childs = node.childNodes();
+    var node = handler/principal-read.js; // XML parsing disabled
+    var childs = []; // XML disabled
     var response = "";
     var len = childs.length;
     for (var i=0; i < len; ++i)
@@ -80,7 +73,7 @@ function propfind(comm)
                 response += "";
                 break;
             default:
-                if(name != 'text') LSE_logger.warn(`[Fennel-NG Principal] P-PF: not handled: ${name}`);
+                if(name != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-PF: not handled: ${name}`);
                 break;
         }
     }
@@ -98,12 +91,12 @@ function propfind(comm)
 }
 function report(comm)
 {
-    LSE_logger.debug(`[Fennel-NG Principal] principal.report called`);
+    LSE_Logger.debug(`[Fennel-NG Principal] principal.report called`);
     comm.setStandardHeaders();
     var body = comm.getReqBody();
     if(!body)
     {
-        LSE_logger.warn(`[Fennel-NG Principal] principal.report called with no body`);
+        LSE_Logger.warn(`[Fennel-NG Principal] principal.report called with no body`);
         comm.setResponseCode(500);
         comm.appendResBody("Internal Server Error");
         comm.flushResponse();
@@ -112,17 +105,11 @@ function report(comm)
     comm.setResponseCode(200);
     comm.appendResBody(xh.getXMLHead());
     var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.get('/A:propfind/A:prop', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/principal-read.js; // XML parsing disabled
     var response = "";
     if(node != undefined)
     {
-        var childs = node.childNodes();
+        var childs = []; // XML disabled
         var len = childs.length;
         for (var i=0; i < len; ++i)
         {
@@ -134,18 +121,12 @@ function report(comm)
                     response += principalUtil.getPrincipalSearchPropertySet(comm);
                     break;
                 default:
-                    if(name != 'text') LSE_logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
+                    if(name != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
                     break;
             }
         }
     }
-    node = xmlDoc.get('/A:principal-search-property-set', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
+    var node = handler/principal-read.js; // XML parsing disabled
     if(node != undefined)
     {
         var name = node.name();
@@ -155,7 +136,7 @@ function report(comm)
                 response += principalUtil.getPrincipalSearchPropertySet(comm);
                 break;
             default:
-                if(name != 'text') LSE_logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
+                if(name != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
                 break;
         }
     }
