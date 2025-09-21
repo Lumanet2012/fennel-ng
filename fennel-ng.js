@@ -50,13 +50,17 @@ function initializeFennelNG()
 }
 function setupRoutes()
 {
+    var prefix = config.public_route_prefix || '';
     crossroads.addRoute('/p/:params*:', onHitPrincipal);
     crossroads.addRoute('/cal/:username:/:cal:/:params*:', onHitCalendar);
-    crossroads.addRoute('/card/:username:/:card:/:params*:', onHitCard);
-    crossroads.addRoute('/.well-known/:params*:', onHitWellKnown);
-    crossroads.addRoute('/', onHitRoot);
-    crossroads.bypassed.add(onBypass);
-    LSE_Logger.debug('[Fennel-NG] CalDAV/CardDAV routes configured');
+    crossroads.addRoute('/card/:username:/:card:/:params*:', onHitAddressbook);
+    if(prefix) {
+        crossroads.addRoute(prefix + '/p/:params*:', onHitPrincipal);
+        crossroads.addRoute(prefix + '/cal/:username:/:cal:/:params*:', onHitCalendar);
+        crossroads.addRoute(prefix + '/card/:username:/:card:/:params*:', onHitAddressbook);
+        crossroads.addRoute(prefix + '/cal/', onHitCalendarRoot);
+        crossroads.addRoute(prefix + '/card/', onHitAddressbookRoot);
+    }
 }
 function onBypass(comm, path)
 {
@@ -127,6 +131,50 @@ function onHitCard(comm, username, card, params)
         return;
     }
     handler.handleCard(comm);
+}
+function onHitAddressbook(comm, username, card, params)
+{
+    comm.username = username;
+    comm.card = card;
+    comm.params = params;
+    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    {
+        var res = comm.getRes();
+        LSE_Logger.warn(`[Fennel-NG] Addressbook request denied for user: ${comm.getUser().getUserName()}`);
+        res.writeHead(403);
+        res.write("Access denied to this addressbook resource");
+        res.end();
+        return;
+    }
+    handler.handleAddressbook(comm);
+}
+function onHitCalendarRoot(comm)
+{
+    LSE_Logger.debug('[Fennel-NG] Called calendar root');
+    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    {
+        var res = comm.getRes();
+        LSE_Logger.warn(`[Fennel-NG] Calendar root request denied for user: ${comm.getUser().getUserName()}`);
+        res.writeHead(403);
+        res.write("Access denied to calendar root");
+        res.end();
+        return;
+    }
+    handler.handleCalendarRoot(comm);
+}
+function onHitAddressbookRoot(comm)
+{
+    LSE_Logger.debug('[Fennel-NG] Called addressbook root');
+    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    {
+        var res = comm.getRes();
+        LSE_Logger.warn(`[Fennel-NG] Addressbook root request denied for user: ${comm.getUser().getUserName()}`);
+        res.writeHead(403);
+        res.write("Access denied to addressbook root");
+        res.end();
+        return;
+    }
+    handler.handleAddressbookRoot(comm);
 }
 function handleRequest(req, res, next)
 {
@@ -238,11 +286,13 @@ function createExpressMiddleware()
     return function(req, res, next)
     {
         var originalUrl = req.originalUrl || req.url;
-        var isFennelPath = originalUrl.startsWith('/p/') || 
-                          originalUrl.startsWith('/cal/') || 
-                          originalUrl.startsWith('/card/') || 
-                          originalUrl.startsWith('/.well-known/') ||
-                          originalUrl === '/';
+        var prefix = config.public_route_prefix || '';
+        var isFennelPath = originalUrl.startsWith('/p/') ||
+                           originalUrl.startsWith('/cal/') ||
+                           originalUrl.startsWith('/card/') ||
+                           originalUrl.startsWith('/.well-known/') ||
+                           originalUrl === '/' ||
+                           (prefix && originalUrl.startsWith(prefix));
         if(isFennelPath)
         {
             LSE_Logger.debug(`[Fennel-NG] Handling CalDAV/CardDAV request: ${originalUrl}`);

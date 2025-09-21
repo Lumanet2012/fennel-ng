@@ -8,10 +8,8 @@
  -----------------------------------------------------------------------------*/
 
 const argon2 = require('argon2');
-const log = require('./log').log;
 
 class Argon2Auth {
-    
     /**
      * Hash password with Argon2
      */
@@ -60,5 +58,4 @@ class Argon2Auth {
         return await this.hashPassword(plainPassword);
     }
 }
-
 module.exports = Argon2Auth;
