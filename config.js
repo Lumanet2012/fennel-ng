@@ -2,8 +2,8 @@
  **
  ** - Fennel Card-/CalDAV -
  **
- ** Copyright 2014-17 by
- ** SwordLord - the coding crew - http://www.swordlord.com
+ ** Copyright 2025 by
+ ** LSE Group  https://lumanet.info
  ** and contributing authors
  **
  ** This program is free software; you can redistribute it and/or modify it
@@ -22,8 +22,7 @@
  **-----------------------------------------------------------------------------
  **
  ** Original Authors:
- ** LordEidi@swordlord.com
- ** LordLightningBolt@swordlord.com
+ ** obecker@lumanet.info
  **
  ** $Id:
  **
@@ -31,66 +30,79 @@
 
 // Place all your configuration options here
 
+var mysql = require('mysql2/promise');
 var config =
 {
     version_nr: '0.1.0',
-
-    // Server specific configuration
-    // Please use a proxy in front of Fennel to support TLS.
-    // We suggest you use nginx as the TLS endpoint
     port: 8888,
-    //port: 80,
-    ip: '127.0.0.1',
-    //ip: '0.0.0.0',
-
-    // db specific configuration. you can use whatever sequelize supports.
-    db_name: 'fennel',
-    db_uid: 'uid',
-    db_pwd: 'pwd',
-    db_dialect: 'sqlite',
+    ip: '10.0.0.11',
+    db_name: 'lse_cal',
+    db_uid: 'LSE-Admin',
+    db_pwd: 'LSE-@dm1n',
+    db_host: 'localhost',
+    db_port: 3306,
+    db_dialect: 'mysql',
     db_logging: true,
-    db_storage: 'fennel.sqlite',
-    // db_host: 'localhost', // For myql, postgres etc.
-
-    // Authentication
-    // Authentication methods so far: courier, htaccess, ldap
-    auth_method: 'htaccess',
+    db_connection_limit: 10,
+    db_queue_limit: 0,
+    db_enable_keepalive: true,
+    db_keepalive_initial_delay: 0,
+    jwt_secret: 'Orlando@6800882-orlando@5204502',
+    jwt_cookie_name: 'LSE_token',
+    jwt_expiry_minutes: 30,
+    jwt_auto_renewal: true,
+    redis_host: '10.0.0.11',
+    redis_port: 6379,
+    redis_password: 'Orlando@6800882',
+    redis_db: 0,
+    redis_key_prefix: 'fennel:',
+    redis_connection_timeout: 5000,
+    redis_command_timeout: 3000,
+    auth_method: 'ldap',
     auth_method_courier_socket: '/var/run/courier/authdaemon/socket',
     auth_method_htaccess_file: 'demouser.htaccess',
-
-    // ldap authentication requires the ldapjs@1.0.0 node module. Please install manually
-    auth_method_ldap_url: 'ldap://localhost:3002',
-    auth_method_ldap_user_base_dn: 'ou=users,dc=example',
-
-
-    // Authorisation
-    // Authorisation Rules:
-    // This property takes an array of Shiro formatted strings. Users are
-    // only permitted access to resources when said access is explicitly
-    // allowed here. Please see http://shiro.apache.org/permissions.html
-    // for a short introduction to Shiro Syntax.
-    //
-    // Fennel uses the URL + the function to check for authorisation.
-    // /card/demo/default/card_id.vcf with method PUT will become
-    // card:demo:default:card_id.vcf:put
-    //
-    // Please note that $username is not recognised by shiro-trie but
-    // will be replaced by Fennel with the current user when loaded into
-    // the current process.
-    //
-    // The current set will allow the owner to access his or her own stuff
+    auth_method_ldap_url: 'ldaps://atl-web01.lumanet.info:636',
+    auth_method_ldap_user_base_dn: 'ou=customers,ou=people,dc=lumanet,dc=info',
+    auth_method_ldap_group_base_dn: 'ou=groups,dc=lumanet,dc=info',
+    auth_method_ldap_service_dn: 'cn=fennelng-service,ou=service-accounts,dc=lumanet,dc=info',
+    auth_method_ldap_service_password: process.env.LDAP_SERVICE_PASSWORD,
+    auth_method_ldap_required_group: 'caldav-users',
+    auth_cache_ttl: 300,
     authorisation: [
         'cal:$username:*',
         'card:$username:*',
         'p:options,report,propfind',
         'p:$username:*'
     ],
-
     test_user_name: 'demo',
     test_user_pwd: 'demo'
 };
-
-// Exporting.
+var fennelNGPool;
+if(global.lse_cal_pool)
+{
+    fennelNGPool = global.lse_cal_pool;
+    console.log('[Fennel-NG DB] Using existing MySQL Pool');
+}
+else
+{
+    fennelNGPool = mysql.createPool({
+        host: config.db_host,
+        port: config.db_port,
+        user: config.db_uid,
+        password: config.db_pwd,
+        database: config.db_name,
+        waitForConnections: true,
+        connectionLimit: config.db_connection_limit,
+        queueLimit: config.db_queue_limit,
+        enableKeepAlive: config.db_enable_keepalive,
+        keepAliveInitialDelay: config.db_keepalive_initial_delay
+    });
+    console.log('[Fennel-NG DB] Created MySQL Pool');
+}
 module.exports = {
-    config: config
+    config: config,
+    fennelNGPool: fennelNGPool
 };
+
+
+

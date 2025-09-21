@@ -1,4 +1,3 @@
 *.txt
 *.sqlite
-utils/*
 .DS_Store
