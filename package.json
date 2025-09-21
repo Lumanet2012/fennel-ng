@@ -2,11 +2,11 @@
   "name": "fennel-ng",
   "version": "2.0.0",
   "description": "Fennel Next Generation - Modern CalDAV/CardDAV server with SSO, LDAP, and advanced authentication",
-  "author": "Lumanet Team",
+  "author": "LSE Group",
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/fennel-ng.git"
+    "url": "https://github.com/Lumanet2012/fennel-ng.git"
   },
   "keywords": ["caldav", "carddav", "webdav", "nodejs", "sso", "ldap", "next-generation"],
   "main": "server.js",
@@ -19,6 +19,18 @@
   },
   "engines": {
     "node": ">=16.0.0"
+  }
+  {
+  "dependencies": {
+    "ldapjs": "^1.0.0",
+    "mysql2": "^3.0.0",
+    "argon2": "^0.40.1",
+    "uuid": "^9.0.0",
+    "ioredis": "^5.3.2"
+    "debug": "^4.3.0",
+    "xml2js": "^0.6.0",
+    "moment": "^2.29.0",
+    "LSE_Logger": "^1.0.0"
   }
 }
 

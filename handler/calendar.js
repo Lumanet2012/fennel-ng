@@ -1,22 +1,10 @@
-/*-----------------------------------------------------------------------------
- **
- ** - Fennel Card-/CalDAV -
- **
- ** Copyright 2014-17 by
- ** SwordLord - the coding crew - http://www.swordlord.com
- ** and contributing authors
- **
- -----------------------------------------------------------------------------*/
-
 var xml = require("libxmljs");
 var moment = require('moment');
-
 var xh = require("../libs/xmlhelper");
-var log = require('../libs/log').log;
-var ICS = require('../libs/db').ICS;
-var CAL = require('../libs/db').CAL;
-
-// Exporting.
+var LSE_logger = require('LSE_logger');
+var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
+var CALENDARS = require('../libs/db').CALENDARS;
+var CALENDARCHANGES = require('../libs/db').CALENDARCHANGES;
 module.exports = {
     propfind: propfind,
     proppatch: proppatch,
@@ -28,20 +16,13 @@ module.exports = {
     delete: del,
     move: move
 };
-
 function del(comm)
 {
-    log.debug("calendar.delete called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.delete called`);
     comm.setHeader("Content-Type", "text/html");
-    comm.setHeader("Server", "Fennel");
-
+    comm.setHeader("Server", "Fennel-NG");
     comm.setResponseCode(204);
-
     var isRoot = true;
-
-    // if URL element size === 4, this is a call for the root URL of a user.
-    // TODO: check if the current user is the user requesting the resource (ACL)
     if(comm.getUrlElementSize() > 4)
     {
         var lastPathElement = comm.getFilenameFromPath(false);
@@ -50,181 +31,199 @@ function del(comm)
             isRoot = false;
         }
     }
-
     if(isRoot === true)
     {
         var calendarId = comm.getPathElement(3);
-
-        CAL.find({ where: {pkey: calendarId} }).then(function(cal)
+        CALENDARS.findOne({ where: {id: calendarId} }).then(function(cal)
         {
             if(cal === null)
             {
-                log.warn('err: could not find calendar');
+            response += "                <d:unbind/>";
+            response += "            </d:privilege>";
+            response += "            <d:privilege xmlns:d=\"DAV:\">";
+            response += "                <d:unlock/>";
+            response += "           </d:privilege>";
+            response += "           <d:privilege xmlns:d=\"DAV:\">";
+            response += "               <d:read/>";
+            response += "           </d:privilege>";
+            response += "           <d:privilege xmlns:d=\"DAV:\">";
+            response += "                <d:read-acl/>";
+            response += "           </d:privilege>";
+            response += "           <d:privilege xmlns:d=\"DAV:\">";
+            response += "               <d:read-current-user-privilege-set/>";
+            response += "            </d:privilege>";
+            response += "       </d:current-user-privilege-set>";
+            response += "       <d:owner>";
+            response += "           <d:href>/fennel-ng/p/" + username + "/</d:href>";
+            response += "       </d:owner>";
+            response += "       <d:resourcetype>";
+            response += "           <d:collection/>";
+            response += "           <cs:notification/>";
+            response += "       </d:resourcetype>";
+            response += "       <d:supported-report-set>";
+            response += "           <d:supported-report>";
+            response += "               <d:report>";
+            response += "                   <d:expand-property/>";
+            response += "               </d:report>";
+            response += "           </d:supported-report>";
+            response += "           <d:supported-report>";
+            response += "               <d:report>";
+            response += "                   <d:principal-property-search/>";
+            response += "               </d:report>";
+            response += "           </d:supported-report>";
+            response += "          <d:supported-report>";
+            response += "               <d:report>";
+            response += "                  <d:principal-search-property-set/>";
+            response += "              </d:report>";
+            response += "           </d:supported-report>";
+            response += "       </d:supported-report-set>";
+            response += "   </d:prop>";
+            response += "<d:status>HTTP/1.1 200 OK</d:status>";
+            response += "</d:propstat>";
+            response += "</d:response>";
+            return response;
+}LSE_logger.warn(`[Fennel-NG CalDAV] err: could not find calendar`);
             }
             else
             {
                 cal.destroy().then(function()
                 {
-                    log.debug('calendar deleted');
+                    LSE_logger.debug(`[Fennel-NG CalDAV] calendar deleted`);
                 })
             }
-
             comm.flushResponse();
         });
     }
     else
     {
-        var ics_id = comm.getFilenameFromPath(true);
-
-        ICS.find( { where: {pkey: ics_id}}).then(function(ics)
+        var eventUri = comm.getFilenameFromPath(false);
+        CALENDAROBJECTS.findOne( { where: {uri: eventUri}}).then(function(event)
         {
-            if(ics === null)
+            if(event === null)
             {
-                log.warn('err: could not find ics');
+                LSE_logger.warn(`[Fennel-NG CalDAV] err: could not find calendar event`);
             }
             else
             {
-                ics.destroy().then(function()
+                event.destroy().then(function()
                 {
-                    log.debug('ics deleted');
+                    LSE_logger.debug(`[Fennel-NG CalDAV] calendar event deleted`);
                 })
             }
-
             comm.flushResponse();
         });
     }
-
 }
-
 function gett(comm)
 {
-    log.debug("calendar.get called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.get called`);
     comm.setHeader("Content-Type", "text/calendar");
-
-    var ics_id = comm.getFilenameFromPath(true);
-    ICS.find( { where: {pkey: ics_id}}).then(function(ics)
+    var eventUri = comm.getFilenameFromPath(false);
+    CALENDAROBJECTS.findOne( { where: {uri: eventUri}}).then(function(event)
     {
-        if(ics === null)
+        if(event === null)
         {
-            log.warn('err: could not find ics');
+            LSE_logger.warn(`[Fennel-NG CalDAV] err: could not find calendar event`);
         }
         else
         {
-            var content = ics.content;
-            //content = content.replace(/\r\n|\r|\n/g,'&#13;\r\n');
-
+            var content = event.calendardata.toString();
             comm.appendResBody(content);
         }
-
         comm.flushResponse();
     });
 }
-
 function put(comm)
 {
-    log.debug("calendar.put called");
-
-    var ics_id = comm.getFilenameFromPath(true);
-    var calendar = comm.getCalIdFromURL();
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.put called`);
+    var eventUri = comm.getFilenameFromPath(false);
+    var calendarUri = comm.getCalIdFromURL();
     var body = comm.getReqBody();
-
-    //console.log(body);
-
     var parser = require('../libs/parser');
     var pbody = parser.parseICS(body);
-
     var dtStart = moment(pbody.VCALENDAR.VEVENT.DTSTART);
     var dtEnd = moment(pbody.VCALENDAR.VEVENT.DTEND);
-
-    // store dtstart and dtend per ICS record so that we can filter for this in the REPORT query
-    var defaults = {
-        calendarId: calendar,
-        startDate: dtStart.toISOString(),
-        endDate:  dtEnd.toISOString(),
-        content: body
-    };
-
-    ICS.findOrCreate({ where: {pkey: ics_id}, defaults: defaults}).spread(function(ics, created)
-    {
-        if(created)
-        {
-            log.debug('Created ICS: ' + JSON.stringify(ics, null, 4));
+    var eventUID = pbody.VCALENDAR.VEVENT.UID;
+    CALENDARS.findOne({ where: {uri: calendarUri} }).then(function(calendar) {
+        if (!calendar) {
+            LSE_logger.error(`[Fennel-NG CalDAV] Calendar not found: ${calendarUri}`);
+            comm.setResponseCode(404);
+            comm.flushResponse();
+            return;
         }
-        else
-        {
-            var ifNoneMatch = comm.getHeader('If-None-Match');
-            if(ifNoneMatch && ifNoneMatch === "*")
+        var defaults = {
+            calendarid: calendar.id,
+            calendardata: Buffer.from(body),
+            uri: eventUri,
+            lastmodified: Math.floor(Date.now() / 1000),
+            etag: require('crypto').createHash('md5').update(body).digest('hex'),
+            size: Buffer.byteLength(body),
+            componenttype: 'VEVENT',
+            firstoccurence: Math.floor(dtStart.toDate().getTime() / 1000),
+            lastoccurence: Math.floor(dtEnd.toDate().getTime() / 1000),
+            uid: eventUID
+        };
+        CALENDAROBJECTS.findOrCreate({ where: {uri: eventUri}, defaults: defaults}).then(function(result) {
+            var event = result[0];
+            var created = result[1];
+            if(created)
             {
-                log.debug('If-None-Match matches, return status code 412');
-
-                comm.setStandardHeaders();
-
-                var date = new Date();
-                comm.setHeader("ETag", Number(date));
-
-                comm.setResponseCode(412);
-
-                comm.appendResBody(xh.getXMLHead());
-
-                comm.appendResBody("<d:error xmlns:d=\"DAV:\" xmlns:s=\"http://swordlord.org/ns\">");
-                comm.appendResBody("<s:exception>Fennel\DAV\Exception\PreconditionFailed</s:exception>");
-                comm.appendResBody("<s:message>An If-None-Match header was specified, but the ETag matched (or * was specified).</s:message>");
-                comm.appendResBody("<s:header>If-None-Match</s:header>");
-                comm.appendResBody("</d:error>");
-
-                comm.flushResponse();
-                return;
+                LSE_logger.debug(`[Fennel-NG CalDAV] Created calendar event: ${eventUri}`);
             }
             else
             {
-                startDate = dtStart.toISOString();
-                endDate = dtEnd.toISOString();
-
-                ics.content = comm.getReqBody();
-                log.debug('Loaded ICS: ' + JSON.stringify(ics, null, 4));
-            }
-        }
-
-        ics.save().then(function()
-        {
-            log.info('ics updated');
-
-            // update calendar collection
-            CAL.findOne({ where: {pkey: calendar} } ).then(function(cal)
-            {
-                if(cal !== null && cal !== undefined)
+                var ifNoneMatch = comm.getHeader('If-None-Match');
+                if(ifNoneMatch && ifNoneMatch === "*")
                 {
-                    cal.increment('synctoken', { by: 1 }).then(function()
-                    {
-                        log.info('synctoken on cal updated');
-                    });
+                    LSE_logger.debug(`[Fennel-NG CalDAV] If-None-Match matches, return status code 412`);
+                    comm.setStandardHeaders();
+                    var date = new Date();
+                    comm.setHeader("ETag", Number(date));
+                    comm.setResponseCode(412);
+                    comm.appendResBody(xh.getXMLHead());
+                    comm.appendResBody("<d:error xmlns:d=\"DAV:\" xmlns:s=\"http://swordlord.org/ns\">");
+                    comm.appendResBody("<s:exception>Fennel\\DAV\\Exception\\PreconditionFailed</s:exception>");
+                    comm.appendResBody("<s:message>An If-None-Match header was specified, but the ETag matched (or * was specified).</s:message>");
+                    comm.appendResBody("<s:header>If-None-Match</s:header>");
+                    comm.appendResBody("</d:error>");
+                    comm.flushResponse();
+                    return;
                 }
+                else
+                {
+                    event.calendardata = Buffer.from(body);
+                    event.lastmodified = Math.floor(Date.now() / 1000);
+                    event.etag = require('crypto').createHash('md5').update(body).digest('hex');
+                    event.size = Buffer.byteLength(body);
+                    event.firstoccurence = Math.floor(dtStart.toDate().getTime() / 1000);
+                    event.lastoccurence = Math.floor(dtEnd.toDate().getTime() / 1000);
+                    event.uid = eventUID;
+                    LSE_logger.debug(`[Fennel-NG CalDAV] Updated calendar event: ${eventUri}`);
+                }
+            }
+            event.save().then(function()
+            {
+                LSE_logger.info(`[Fennel-NG CalDAV] calendar event saved`);
+                calendar.increment('synctoken', { by: 1 }).then(function()
+                {
+                    LSE_logger.info(`[Fennel-NG CalDAV] synctoken on calendar updated`);
+                });
+                comm.setStandardHeaders();
+                var date = new Date();
+                comm.setHeader("ETag", event.etag);
+                comm.setResponseCode(created ? 201 : 200);
+                comm.flushResponse();
             });
-
-            comm.setStandardHeaders();
-
-            var date = new Date();
-            comm.setHeader("ETag", Number(date));
-
-            comm.setResponseCode(201);
-            comm.flushResponse();
         });
     });
 }
-
 function move(comm)
 {
-    log.debug("calendar.move called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.move called`);
     comm.setStandardHeaders();
-
-    var ics_id = comm.getFilenameFromPath(true);
-    var calendar = comm.getCalIdFromURL();
-
+    var eventUri = comm.getFilenameFromPath(false);
+    var calendarUri = comm.getCalIdFromURL();
     var destination = "";
-
     var req = comm.getReq();
     var headers = req.headers;
     for(var header in headers)
@@ -234,40 +233,42 @@ function move(comm)
             destination = req.headers[header];
         }
     }
-
     if(destination.length > 0)
     {
         var aURL = destination.split("/");
-        var newCal = aURL[aURL.length - 2];
-
-        ICS.find({ where: {pkey: ics_id} }).then(function(ics)
-        {
-            if(ics === null)
-            {
-                log.warn('ics not found');
+        var newCalUri = aURL[aURL.length - 2];
+        CALENDARS.findOne({ where: {uri: newCalUri} }).then(function(newCalendar) {
+            if (!newCalendar) {
+                LSE_logger.error(`[Fennel-NG CalDAV] Destination calendar not found: ${newCalUri}`);
+                comm.setResponseCode(404);
+                comm.flushResponse();
+                return;
             }
-            else
+            CALENDAROBJECTS.findOne({ where: {uri: eventUri} }).then(function(event)
             {
-                ics.calendarId = newCal;
-                ics.save().then(function()
+                if(event === null)
                 {
-                    log.warn('ics updated');
-                });
-            }
+                    LSE_logger.warn(`[Fennel-NG CalDAV] calendar event not found for move`);
+                }
+                else
+                {
+                    event.calendarid = newCalendar.id;
+                    event.save().then(function()
+                    {
+                        LSE_logger.info(`[Fennel-NG CalDAV] calendar event moved`);
+                    });
+                }
+            });
         });
     }
-
     comm.setResponseCode(201);
     comm.flushResponse();
 }
-
 function propfind(comm)
 {
-    log.debug("calendar.propfind called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.propfind called`);
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-
     var node = xmlDoc.get('/A:propfind/A:prop', {   A: 'DAV:',
         B: "urn:ietf:params:xml:ns:caldav",
         C: 'http://calendarserver.org/ns/',
@@ -275,32 +276,17 @@ function propfind(comm)
         E: "http://me.com/_namespace/"
     });
     var childs = node.childNodes();
-
     var username = comm.getUser().getUserName();
-
-    /*
-    How to handle PROPFIND Requests
-    We handle these cases:
-        - 1 /cal/USER/
-        - 2 /cal/USER/CALENDAR_ID/
-        - 3 /cal/USER/notifications/
-        - 4 /cal/USER/inbox/
-    */
-
-    // find out if this PROPFIND request is for a specific user (1)
     if(comm.getUrlElementSize() === 4)
     {
-        // get all calendar info of user
         handlePropfindForUser(comm);
         return;
     }
-
     var arrURL = comm.getURLAsArray();
     if(arrURL.length === 5)
     {
-        // get all details from specified calendar
-        var calendarId = arrURL[3];
-        switch (calendarId) {
+        var calendarUri = arrURL[3];
+        switch (calendarUri) {
             case 'notifications':
                 handlePropfindForCalendarNotifications(comm);
                 break;
@@ -311,19 +297,14 @@ function propfind(comm)
                 handlePropfindForCalendarOutbox(comm);
                 break;
             default:
-                handlePropfindForCalendarId(comm, calendarId);
+                handlePropfindForCalendarUri(comm, calendarUri);
                 break;
         }
-
         return;
     }
-
-    // if URL element size === 4, this is a call for the root URL of a user.
-    // TODO:
     if(comm.getURL() === "/")
     {
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">";
-
         var len = childs.length;
         for (var i=0; i < len; ++i)
         {
@@ -334,41 +315,30 @@ function propfind(comm)
                 case 'calendar-free-busy-set':
                     response += "<d:response><d:href>/</d:href></d:response>";
                     break;
-
                 case 'current-user-principal':
                     response += "<d:response><d:href>/</d:href>";
-                    response += "<d:propstat><d:prop><d:current-user-principal><d:href>/p/" + username + "/</d:href></d:current-user-principal></d:prop>";
+                    response += "<d:propstat><d:prop><d:current-user-principal><d:href>/fennel-ng/p/" + username + "/</d:href></d:current-user-principal></d:prop>";
                     response += "<d:status>HTTP/1.1 200 OK</d:status>";
                     response += "</d:propstat>";
                     response += "</d:response>";
                     break;
-
                 case 'principal-collection-set':
-                    response += "<d:principal-collection-set><d:href>/p/</d:href></d:principal-collection-set>";
+                    response += "<d:principal-collection-set><d:href>/fennel-ng/p/</d:href></d:principal-collection-set>";
                     break;
             }
         }
-
         response += "</d:multistatus>";
         comm.appendResBody(response);
         comm.flushResponse();
         return;
     }
-
 }
-
-/**
- *
- * @param comm
- */
 function handlePropfindForCalendarInbox(comm)
 {
     comm.setStandardHeaders();
     comm.setDAVHeaders();
-
     comm.setResponseCode(207);
     comm.appendResBody(xh.getXMLHead());
-
     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
     comm.appendResBody("<d:response><d:href>" + comm.getURL() + "</d:href>");
     comm.appendResBody("<d:propstat>");
@@ -376,33 +346,24 @@ function handlePropfindForCalendarInbox(comm)
     comm.appendResBody("</d:propstat>");
     comm.appendResBody("</d:response>");
     comm.appendResBody("</d:multistatus>");
-
     comm.flushResponse();
 }
-
 function handlePropfindForCalendarOutbox(comm)
 {
     comm.setStandardHeaders();
     comm.setDAVHeaders();
-
     comm.setResponseCode(207);
     comm.appendResBody(xh.getXMLHead());
-
     var response = returnOutbox(comm);
     comm.appendResBody(response);
     comm.flushResponse();
 }
-
 function handlePropfindForCalendarNotifications(comm)
 {
-    // response += returnNotifications(comm);
-    // comm.appendResBody(response);
     comm.setStandardHeaders();
     comm.setDAVHeaders();
-
     comm.setResponseCode(207);
     comm.appendResBody(xh.getXMLHead());
-
     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
     comm.appendResBody("<d:response><d:href>" + comm.getURL() + "</d:href>");
     comm.appendResBody("<d:propstat>");
@@ -410,27 +371,22 @@ function handlePropfindForCalendarNotifications(comm)
     comm.appendResBody("</d:propstat>");
     comm.appendResBody("</d:response>");
     comm.appendResBody("</d:multistatus>");
-
     comm.flushResponse();
 }
-
-function handlePropfindForCalendarId(comm, calendarId)
+function handlePropfindForCalendarUri(comm, calendarUri)
 {
-    CAL.find({ where: {pkey: calendarId} }).then(function(cal)
+    CALENDARS.findOne({ where: {uri: calendarUri} }).then(function(cal)
     {
         comm.setStandardHeaders();
         comm.setDAVHeaders();
-
         comm.setResponseCode(207);
         comm.appendResBody(xh.getXMLHead());
-
         if(cal === null)
         {
-            log.warn('Calendar not found: ' + calendarId);
-
+            LSE_logger.warn(`[Fennel-NG CalDAV] Calendar not found: ${calendarUri}`);
             comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
             comm.appendResBody("<d:response>");
-            comm.appendResBody("<d:href>/cal/" + comm.getUser().getUserName() + "/" + calendarId + "/</d:href>");
+            comm.appendResBody("<d:href>/fennel-ng/cal/" + comm.getUser().getUserName() + "/" + calendarUri + "/</d:href>");
             comm.appendResBody("<d:propstat>");
             comm.appendResBody("<d:status>HTTP/1.1 404 Not Found</d:status>");
             comm.appendResBody("</d:propstat>");
@@ -439,9 +395,7 @@ function handlePropfindForCalendarId(comm, calendarId)
         }
         else
         {
-            // for every ICS element, return the props...
             var xmlDoc = xml.parseXml(comm.getReqBody());
-
             var node = xmlDoc.get('/A:propfind/A:prop', {   A: 'DAV:',
                 B: "urn:ietf:params:xml:ns:caldav",
                 C: 'http://calendarserver.org/ns/',
@@ -449,11 +403,9 @@ function handlePropfindForCalendarId(comm, calendarId)
                 E: "http://me.com/_namespace/"
             });
             var childs = node.childNodes();
-
             var response = returnPropfindElements(comm, cal, childs);
             comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
             comm.appendResBody("<d:response><d:href>" + comm.getURL() + "</d:href>");
-
             if(response.length > 0)
             {
                 comm.appendResBody("<d:propstat>");
@@ -465,7 +417,6 @@ function handlePropfindForCalendarId(comm, calendarId)
             }
             else
             {
-                // TODO: not necessarily clever to do...
                 comm.appendResBody("<d:propstat>");
                 comm.appendResBody("<d:status>HTTP/1.1 404 Not Found</d:status>");
                 comm.appendResBody("</d:propstat>");
@@ -473,25 +424,16 @@ function handlePropfindForCalendarId(comm, calendarId)
             comm.appendResBody("</d:response>");
             comm.appendResBody("</d:multistatus>");
         }
-
         comm.flushResponse();
     });
 }
-
-/**
- *
- * @param comm
- */
 function handlePropfindForUser(comm)
 {
     comm.setStandardHeaders();
     comm.setDAVHeaders();
-
     comm.setResponseCode(207);
     comm.appendResBody(xh.getXMLHead());
-
     var response = "";
-
     var xmlDoc = xml.parseXml(comm.getReqBody());
     var nodeChecksum = xmlDoc.get('/A:propfind/A:prop/C:checksum-versions', {   A: 'DAV:',
         B: "urn:ietf:params:xml:ns:caldav",
@@ -499,7 +441,6 @@ function handlePropfindForUser(comm)
         D: "http://apple.com/ns/ical/",
         E: "http://me.com/_namespace/"
     });
-
     if(nodeChecksum !== undefined)
     {
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">";
@@ -510,9 +451,7 @@ function handlePropfindForUser(comm)
     }
     else
     {
-        // for every ICS element, return the props...
         var xmlDoc = xml.parseXml(comm.getReqBody());
-
         var node = xmlDoc.get('/A:propfind/A:prop', {   A: 'DAV:',
             B: "urn:ietf:params:xml:ns:caldav",
             C: 'http://calendarserver.org/ns/',
@@ -520,43 +459,30 @@ function handlePropfindForUser(comm)
             E: "http://me.com/_namespace/"
         });
         var childs = node.childNodes();
-
-        // first get the root node info
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">";
         response += getCalendarRootNodeResponse(comm, childs);
-
         var username = comm.getUserIdFromURL();
-
-        // then add info for all further known calendars of same user
-        var query = { where: {owner: username}, order: [['order', 'ASC']] };
-
-        CAL.findAndCountAll({ where: {owner: username}, order: [['order', 'ASC']] }).then(function(result)
+        var userPrincipalUri = 'principals/' + username;
+        CALENDARS.findAll({ where: {principaluri: userPrincipalUri}, order: [['calendarorder', 'ASC']] }).then(function(calendars)
         {
-            for (var i=0; i < result.count; ++i)
+            for (var i=0; i < calendars.length; ++i)
             {
-                var calendar = result.rows[i];
-
+                var calendar = calendars[i];
                 response += returnCalendar(comm, calendar, childs);
             }
-
             response += returnOutbox(comm);
             response += returnNotifications(comm);
-
             response += "</d:multistatus>";
             comm.appendResBody(response);
             comm.flushResponse();
         });
     }
 }
-
 function returnPropfindElements(comm, calendar, childs)
 {
     var response = "";
-
     var username = comm.getUser().getUserName();
-
     var token = calendar.synctoken;
-
     var len = childs.length;
     for (var i=0; i < len; ++i)
     {
@@ -567,206 +493,155 @@ function returnPropfindElements(comm, calendar, childs)
             case 'add-member':
                 response += "";
                 break;
-
             case 'allowed-sharing-modes':
                 response += "<cs:allowed-sharing-modes><cs:can-be-shared/><cs:can-be-published/></cs:allowed-sharing-modes>";
                 break;
-
             case 'autoprovisioned':
                 response += "";
                 break;
-
             case 'bulk-requests':
                 response += "";
                 break;
-
             case 'calendar-color':
-                response += "<xical:calendar-color xmlns:xical=\"http://apple.com/ns/ical/\">" + calendar.colour + "</xical:calendar-color>";
+                response += "<xical:calendar-color xmlns:xical=\"http://apple.com/ns/ical/\">" + calendar.calendarcolor + "</xical:calendar-color>";
                 break;
-
             case 'calendar-description':
-                response += "";
+                response += "<cal:calendar-description>" + (calendar.description || "") + "</cal:calendar-description>";
                 break;
-
             case 'calendar-free-busy-set':
                 response += "";
                 break;
-
             case 'calendar-order':
-                response += "<xical:calendar-order xmlns:xical=\"http://apple.com/ns/ical/\">" + calendar.order + "</xical:calendar-order>";
+                response += "<xical:calendar-order xmlns:xical=\"http://apple.com/ns/ical/\">" + calendar.calendarorder + "</xical:calendar-order>";
                 break;
-
             case 'calendar-timezone':
-                var timezone = calendar.timezone;
+                var timezone = calendar.timezone || "";
                 timezone = timezone.replace(/\r\n|\r|\n/g,'&#13;\r\n');
-
                 response += "<cal:calendar-timezone>" + timezone + "</cal:calendar-timezone>";
                 break;
-
             case 'current-user-privilege-set':
                 response += getCurrentUserPrivilegeSet();
                 break;
-
             case 'default-alarm-vevent-date':
                 response += "";
                 break;
-
             case 'default-alarm-vevent-datetime':
                 response += "";
                 break;
-
             case 'displayname':
                 response += "<d:displayname>" + calendar.displayname + "</d:displayname>";
                 break;
-
             case 'language-code':
                 response += "";
                 break;
-
             case 'location-code':
                 response += "";
                 break;
-
             case 'owner':
-                response += "<d:owner><d:href>/p/" + username +"/</d:href></d:owner>";
+                response += "<d:owner><d:href>/fennel-ng/p/" + username +"/</d:href></d:owner>";
                 break;
-
-            // TODO Fix URL
             case 'pre-publish-url':
-                response += "<cs:pre-publish-url><d:href>https://127.0.0.1/cal/" + username + "/" + calendar.pkey + "</d:href></cs:pre-publish-url>";
+                response += "<cs:pre-publish-url><d:href>https://127.0.0.1/fennel-ng/cal/" + username + "/" + calendar.uri + "</d:href></cs:pre-publish-url>";
                 break;
-
             case 'publish-url':
                 response += "";
                 break;
-
             case 'push-transports':
                 response += "";
                 break;
-
             case 'pushkey':
                 response += "";
                 break;
-
             case 'quota-available-bytes':
                 response += "";
                 break;
-
             case 'quota-used-bytes':
                 response += "";
                 break;
-
             case 'refreshrate':
                 response += "";
                 break;
-
             case 'resource-id':
                 response += "";
                 break;
-
             case 'resourcetype':
                 response += "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>";
                 break;
-
             case 'schedule-calendar-transp':
-                response += "<cal:schedule-calendar-transp><cal:opaque/></cal:schedule-calendar-transp>";
+                if (calendar.transparent) {
+                    response += "<cal:schedule-calendar-transp><cal:transparent/></cal:schedule-calendar-transp>";
+                } else {
+                    response += "<cal:schedule-calendar-transp><cal:opaque/></cal:schedule-calendar-transp>";
+                }
                 break;
-
             case 'schedule-default-calendar-URL':
                 response += "";
                 break;
-
             case 'source':
                 response += "";
                 break;
-
             case 'subscribed-strip-alarms':
                 response += "";
                 break;
-
             case 'subscribed-strip-attachments':
                 response += "";
                 break;
-
             case 'subscribed-strip-todos':
                 response += "";
                 break;
-
             case 'supported-calendar-component-set':
                 response += "";
                 break;
-
             case 'supported-calendar-component-sets':
-                response += "<cal:supported-calendar-component-set><cal:comp name=\"VEVENT\"/></cal:supported-calendar-component-set>";
+                response += "<cal:supported-calendar-component-set><cal:comp name=\"" + (calendar.components || "VEVENT") + "\"/></cal:supported-calendar-component-set>";
                 break;
-
             case 'supported-report-set':
                 response += getSupportedReportSet(false);
                 break;
-
             case 'getctag':
                 response += "<cs:getctag>http://swordlord.com/ns/sync/" + token + "</cs:getctag>";
                 break;
-
             case 'getetag':
-                // no response?
                 break;
-
             case 'checksum-versions':
-                // no response?
                 break;
-
             case 'sync-token':
                 response += "<d:sync-token>http://swordlord.com/ns/sync/" + token + "</d:sync-token>";
                 break;
-
             case 'acl':
                 response += getACL(comm);
                 break;
-
             case 'getcontenttype':
-                //response += "<d:getcontenttype>text/calendar;charset=utf-8</d:getcontenttype>";
                 break;
-
             default:
-                if(name != 'text') log.warn("CAL-PF: not handled: " + name);
+                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] CAL-PF: not handled: ${name}`);
                 break;
         }
     }
-
     return response;
 }
-
 function returnCalendar(comm, calendar, childs)
 {
     var response = "";
     var username = comm.getUser().getUserName();
-
     response += "	<d:response>";
-    response += "		<d:href>/cal/" + username + "/" + calendar.pkey + "/</d:href>";
+    response += "		<d:href>/fennel-ng/cal/" + username + "/" + calendar.uri + "/</d:href>";
     response += "		<d:propstat>";
     response += "			<d:prop>";
-
     response += returnPropfindElements(comm, calendar, childs);
-
     response += "			</d:prop>";
     response += "			<d:status>HTTP/1.1 200 OK</d:status>";
     response += "		</d:propstat>";
     response += "	</d:response>";
-
     return response;
 }
-
 function getCalendarRootNodeResponse(comm, childs)
 {
     var response = "";
-
     var owner = comm.getUser().getUserName();
-
     response += "<d:response><d:href>" + comm.getURL() + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
-
     var len = childs.length;
     for (var i = 0; i < len; ++i)
     {
@@ -777,57 +652,43 @@ function getCalendarRootNodeResponse(comm, childs)
             case 'current-user-privilege-set':
                 response += getCurrentUserPrivilegeSet();
                 break;
-
             case 'owner':
-                response += "<d:owner><d:href>/p/" + owner +"/</d:href></d:owner>";
+                response += "<d:owner><d:href>/fennel-ng/p/" + owner +"/</d:href></d:owner>";
                 break;
-
             case 'resourcetype':
                 response += "<d:resourcetype><d:collection/></d:resourcetype>";
                 break;
-
             case 'supported-report-set':
                 response += getSupportedReportSet(true);
                 break;
         }
     }
-
     response += "</d:prop>";
     response += "<d:status>HTTP/1.1 200 OK</d:status>";
     response += "</d:propstat>";
     response += "</d:response>";
-
-
     return response;
 }
-
-function  getSupportedReportSet(isRoot)
+function getSupportedReportSet(isRoot)
 {
     var response = "";
-
     response += "<d:supported-report-set>";
-
     if(!isRoot)
     {
         response += "<d:supported-report><d:report><cal:calendar-multiget/></d:report></d:supported-report>";
         response += "<d:supported-report><d:report><cal:calendar-query/></d:report></d:supported-report>";
         response += "<d:supported-report><d:report><cal:free-busy-query/></d:report></d:supported-report>";
     }
-
     response += "<d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>";
     response += "<d:supported-report><d:report><d:expand-property/></d:report></d:supported-report>";
     response += "<d:supported-report><d:report><d:principal-property-search/></d:report></d:supported-report>";
     response += "<d:supported-report><d:report><d:principal-search-property-set/></d:report></d:supported-report>";
     response += "</d:supported-report-set>";
-
     return response;
 }
-
-
-function  getCurrentUserPrivilegeSet()
+function getCurrentUserPrivilegeSet()
 {
     var response = "";
-
     response += "<d:current-user-privilege-set>";
     response += "<d:privilege xmlns:d=\"DAV:\"><cal:read-free-busy/></d:privilege>";
     response += "<d:privilege xmlns:d=\"DAV:\"><d:write/></d:privilege>";
@@ -841,72 +702,58 @@ function  getCurrentUserPrivilegeSet()
     response += "<d:privilege xmlns:d=\"DAV:\"><d:read-acl/></d:privilege>";
     response += "<d:privilege xmlns:d=\"DAV:\"><d:read-current-user-privilege-set/></d:privilege>";
     response += "</d:current-user-privilege-set>";
-
     return response;
 }
-
 function getACL(comm)
 {
     var username = comm.getUser().getUserName();
     var response = "";
-
     response += "<d:acl>";
     response += "    <d:ace>";
-    response += "        <d:principal><d:href>/p/" + username + "</d:href></d:principal>";
+    response += "        <d:principal><d:href>/fennel-ng/p/" + username + "</d:href></d:principal>";
     response += "        <d:grant><d:privilege><d:read/></d:privilege></d:grant>";
     response += "        <d:protected/>";
     response += "    </d:ace>";
-
     response += "    <d:ace>";
-    response += "        <d:principal><d:href>/p/" + username + "</d:href></d:principal>";
+    response += "        <d:principal><d:href>/fennel-ng/p/" + username + "</d:href></d:principal>";
     response += "        <d:grant><d:privilege><d:write/></d:privilege></d:grant>";
     response += "        <d:protected/>";
     response += "    </d:ace>";
-
     response += "    <d:ace>";
-    response += "        <d:principal><d:href>/p/" + username + "/calendar-proxy-write/</d:href></d:principal>";
+    response += "        <d:principal><d:href>/fennel-ng/p/" + username + "/calendar-proxy-write/</d:href></d:principal>";
     response += "        <d:grant><d:privilege><d:read/></d:privilege></d:grant>";
     response += "        <d:protected/>";
     response += "    </d:ace>";
-
     response += "    <d:ace>";
-    response += "        <d:principal><d:href>/p/" + username + "/calendar-proxy-write/</d:href></d:principal>";
+    response += "        <d:principal><d:href>/fennel-ng/p/" + username + "/calendar-proxy-write/</d:href></d:principal>";
     response += "        <d:grant><d:privilege><d:write/></d:privilege></d:grant>";
     response += "        <d:protected/>";
     response += "    </d:ace>";
-
     response += "    <d:ace>";
-    response += "        <d:principal><d:href>/p/" + username + "/calendar-proxy-read/</d:href></d:principal>";
+    response += "        <d:principal><d:href>/fennel-ng/p/" + username + "/calendar-proxy-read/</d:href></d:principal>";
     response += "        <d:grant><d:privilege><d:read/></d:privilege></d:grant>";
     response += "        <d:protected/>";
     response += "    </d:ace>";
-
     response += "    <d:ace>";
     response += "        <d:principal><d:authenticated/></d:principal>";
     response += "        <d:grant><d:privilege><cal:read-free-busy/></d:privilege></d:grant>";
     response += "        <d:protected/>";
     response += "    </d:ace>";
-
     response += "    <d:ace>";
-    response += "        <d:principal><d:href>/p/system/admins/</d:href></d:principal>";
+    response += "        <d:principal><d:href>/fennel-ng/p/system/admins/</d:href></d:principal>";
     response += "        <d:grant><d:privilege><d:all/></d:privilege></d:grant>";
     response += "        <d:protected/>";
     response += "    </d:ace>";
-
+    response += "    </d:acl>";
     return response;
 }
-
 function makeCalendar(comm)
 {
-    log.debug("calendar.makeCalendar called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.makeCalendar called`);
     var response = "";
-
     comm.setStandardHeaders();
-
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-
     var node = xmlDoc.get('/B:mkcalendar/A:set/A:prop', {
         A: 'DAV:',
         B: "urn:ietf:params:xml:ns:caldav",
@@ -914,16 +761,13 @@ function makeCalendar(comm)
         D: "http://apple.com/ns/ical/",
         E: "http://me.com/_namespace/"
     });
-
     var childs = node.childNodes();
-
-    var timezone;
-    var order;
-    var free_busy_set = "";
-    var supported_cal_component;
-    var colour = "#44A703FF";
-    var displayname;
-
+    var timezone = "";
+    var calendarorder = 0;
+    var components = "VEVENT";
+    var calendarcolor = "#44A703FF";
+    var displayname = "";
+    var description = "";
     var len = childs.length;
     if(len > 0)
     {
@@ -934,68 +778,63 @@ function makeCalendar(comm)
             switch(name)
             {
                 case 'calendar-color':
-                    colour = child.text();
+                    calendarcolor = child.text();
                     break;
-
                 case 'calendar-free-busy-set':
-                    free_busy_set = "YES";
                     break;
-
                 case 'displayname':
                     displayname = child.text();
                     break;
-
                 case 'calendar-order':
-                    order = child.text();
+                    calendarorder = parseInt(child.text()) || 0;
                     break;
-
                 case 'supported-calendar-component-set':
-                    supported_cal_component = "VEVENT";
+                    components = "VEVENT";
                     break;
-
                 case 'calendar-timezone':
                     timezone = child.text();
                     break;
-
+                case 'calendar-description':
+                    description = child.text();
+                    break;
                 default:
-                    if(name != 'text') log.warn("CAL-MK: not handled: " + name);
+                    if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] CAL-MK: not handled: ${name}`);
                     break;
             }
         }
-
-        if(colour === undefined || colour.length === 0) { colour = "#0E61B9FF"; }
-
-        //node.childNodes()[1].attr("symbolic-color").value()
-        //node.childNodes()[1].text()
-        var filename = comm.getCalIdFromURL();
-
+        if(calendarcolor === undefined || calendarcolor.length === 0) { calendarcolor = "#0E61B9FF"; }
+        var calendarUri = comm.getCalIdFromURL();
+        var username = comm.getUser().getUserName();
+        var principalUri = 'principals/' + username;
         var defaults = {
-            owner: comm.getUser().getUserName(),
+            principaluri: principalUri,
+            uri: calendarUri,
+            displayname: displayname,
+            description: description,
+            calendarorder: calendarorder,
+            calendarcolor: calendarcolor,
             timezone: timezone,
-            order: order,
-            free_busy_set: free_busy_set,
-            supported_cal_component: supported_cal_component,
-            colour: colour,
-            displayname: displayname
+            components: components,
+            transparent: false,
+            shared: false
         };
-
-        CAL.findOrCreate({ where: {pkey: filename}, defaults: defaults }).spread(function(cal, created)
+        CALENDARS.findOrCreate({ where: {uri: calendarUri}, defaults: defaults }).then(function(result)
             {
+                var calendar = result[0];
+                var created = result[1];
                 if(created)
                 {
-                    log.debug('Created CAL: ' + JSON.stringify(cal, null, 4));
+                    LSE_logger.debug(`[Fennel-NG CalDAV] Created calendar: ${calendarUri}`);
                 }
                 else
                 {
-                    log.debug('Loaded CAL: ' + JSON.stringify(cal, null, 4));
+                    LSE_logger.debug(`[Fennel-NG CalDAV] Calendar already exists: ${calendarUri}`);
                 }
-
-                cal.save().then(function()
+                calendar.save().then(function()
                 {
-                    log.warn('cal saved');
+                    LSE_logger.info(`[Fennel-NG CalDAV] calendar saved`);
                 });
             });
-
         comm.setResponseCode(201);
         comm.appendResBody(response);
         comm.flushResponse();
@@ -1007,106 +846,78 @@ function makeCalendar(comm)
         comm.flushResponse();
     }
 }
-
 function options(comm)
 {
-    log.debug("principal.options called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.options called`);
     comm.pushOptionsResponse();
 }
-
 function report(comm)
 {
-    log.debug("calendar.report called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.report called`);
     comm.setStandardHeaders();
     comm.setResponseCode(207);
-
     comm.appendResBody(xh.getXMLHead());
-
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-
     var rootNode = xmlDoc.root();
-
     var name = rootNode.name();
     switch(name)
     {
         case 'sync-collection':
             handleReportSyncCollection(comm);
             break;
-
         case 'calendar-multiget':
             handleReportCalendarMultiget(comm);
             break;
-
         case 'calendar-query':
             handleReportCalendarQuery(comm, xmlDoc);
             break;
-
         default:
-            if(name != 'text') log.warn("P-R: not handled: " + name);
+            if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
             break;
     }
 }
-
 function handleReportCalendarQuery(comm, xmlDoc)
 {
-    var calendarId = comm.getCalIdFromURL();
-
-    var filter = {calendarId: calendarId};
-
-    // TODO: check filter:
-    // <B:comp-filter name=\"VCALENDAR\">\n\r";
-    //    <B:comp-filter name=\"VEVENT\">\n\r";
-    //    <B:time-range start=\"" + now.subtract(1, "h").format("YMMDD[T]HH0000[Z]") + "\"/>\n\r";
-    //    </B:comp-filter>\n\r";
-    //</B:comp-filter>\n\r
-    //
-    // BEGIN:VEVENT.
-    // DTSTART;TZID=Europe/Zurich:20161014T120000Z.
-    // DTEND;TZID=Europe/Zurich:20161014T130000Z
-    // parse when storing
-
-    var nodeFilter = xmlDoc.get('/B:calendar-query/B:filter/B:comp-filter[@name = "VCALENDAR"]/B:comp-filter[@name = "VEVENT"]/B:time-range', {
-        A: 'DAV:',
-        B: "urn:ietf:params:xml:ns:caldav",
-        C: 'http://calendarserver.org/ns/',
-        D: "http://apple.com/ns/ical/",
-        E: "http://me.com/_namespace/"
-    });
-    if(nodeFilter !== undefined)
-    {
-        var attrs = nodeFilter.attrs();
-        var len = attrs.length;
-
-        for (var i=0; i < len; i++)
+    var calendarUri = comm.getCalIdFromURL();
+    CALENDARS.findOne({ where: {uri: calendarUri} }).then(function(calendar) {
+        if (!calendar) {
+            LSE_logger.error(`[Fennel-NG CalDAV] Calendar not found for query: ${calendarUri}`);
+            comm.setResponseCode(404);
+            comm.flushResponse();
+            return;
+        }
+        var filter = {calendarid: calendar.id};
+        var nodeFilter = xmlDoc.get('/B:calendar-query/B:filter/B:comp-filter[@name = "VCALENDAR"]/B:comp-filter[@name = "VEVENT"]/B:time-range', {
+            A: 'DAV:',
+            B: "urn:ietf:params:xml:ns:caldav",
+            C: 'http://calendarserver.org/ns/',
+            D: "http://apple.com/ns/ical/",
+            E: "http://me.com/_namespace/"
+        });
+        if(nodeFilter !== undefined)
         {
-            var attr = attrs[i];
-
-            switch(attr.name())
+            var attrs = nodeFilter.attrs();
+            var len = attrs.length;
+            for (var i=0; i < len; i++)
             {
-                case 'start':
-                    var filterStart = moment(attr.value());
-                    filter.startDate = { $gte: filterStart.toISOString() };
-                    break;
-
-                case 'end':
-                    var filterEnd = moment(attr.value());
-                    filter.endDate = { $lte: filterEnd.toISOString() };
-                    break;
-
-                default:
-                    break;
+                var attr = attrs[i];
+                switch(attr.name())
+                {
+                    case 'start':
+                        var filterStart = moment(attr.value());
+                        filter.firstoccurence = { $gte: Math.floor(filterStart.toDate().getTime() / 1000) };
+                        break;
+                    case 'end':
+                        var filterEnd = moment(attr.value());
+                        filter.lastoccurence = { $lte: Math.floor(filterEnd.toDate().getTime() / 1000) };
+                        break;
+                    default:
+                        break;
+                }
             }
         }
-    }
-
-    CAL.find({ where: {pkey: calendarId} } ).then(function(cal)
-    {
-        // TODO: filter according to calendar-query.comp-filter
-        ICS.findAndCountAll( { where: filter}
-            ).then(function(result)
+        CALENDAROBJECTS.findAll( { where: filter}).then(function(events)
             {
                 var nodeProp = xmlDoc.get('/B:calendar-query/A:prop', {
                     A: 'DAV:',
@@ -1115,33 +926,17 @@ function handleReportCalendarQuery(comm, xmlDoc)
                     D: "http://apple.com/ns/ical/",
                     E: "http://me.com/_namespace/"
                 });
-
-                var nodeFilter = xmlDoc.get('/B:filter', {
-                    A: 'DAV:',
-                    B: "urn:ietf:params:xml:ns:caldav",
-                    C: 'http://calendarserver.org/ns/',
-                    D: "http://apple.com/ns/ical/",
-                    E: "http://me.com/_namespace/"
-                });
-
                 var response = "";
-
                 var nodeProps = nodeProp.childNodes();
                 var len = nodeProps.length;
-
                 var reqUrl = comm.getURL();
                 reqUrl += reqUrl.match("\/$") ? "" : "/";
-
-                for (var j=0; j < result.count; j++)
+                for (var j=0; j < events.length; j++)
                 {
-                    var ics = result.rows[j];
-
-                    response += "<d:response><d:href>" + reqUrl + ics.pkey + ".ics</d:href>";
+                    var event = events[j];
+                    response += "<d:response><d:href>" + reqUrl + event.uri + "</d:href>";
                     response += "<d:propstat>";
                     response += "<d:prop>";
-
-                    var date = Date.parse(ics.updatedAt);
-
                     for (var i=0; i < len; i++)
                     {
                         var child = nodeProps[i];
@@ -1149,59 +944,33 @@ function handleReportCalendarQuery(comm, xmlDoc)
                         switch(name)
                         {
                             case 'getetag':
-                                response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>";
+                                response += "<d:getetag>\"" + event.etag + "\"</d:getetag>";
                                 break;
-
                             case 'getcontenttype':
-                                response += "<d:getcontenttype>text/calendar; charset=utf-8; component=" + cal.supported_cal_component + "</d:getcontenttype>";
+                                response += "<d:getcontenttype>text/calendar; charset=utf-8; component=" + event.componenttype + "</d:getcontenttype>";
                                 break;
-
                             case 'calendar-data':
-                                response += "<cal:calendar-data>" + ics.content + "</cal:calendar-data>"; // has to be cal: since a few lines below the namespace is cal: not c:
+                                response += "<cal:calendar-data>" + event.calendardata.toString() + "</cal:calendar-data>";
                                 break;
-
                             default:
-                                if(name != 'text') log.warn("P-R: not handled: " + name);
+                                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                                 break;
                         }
                     }
-
                     response += "</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>";
                     response += "</d:response>";
                 }
-
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">\r\n");
                 comm.appendResBody(response);
                 comm.appendResBody("</d:multistatus>");
-
                 comm.flushResponse();
             });
     });
-
-    /*
-    *
-    * <?xml version="1.0" encoding="UTF-8"?>
-     <B:calendar-query xmlns:B="urn:ietf:params:xml:ns:caldav">
-     <A:prop xmlns:A="DAV:">
-        <A:getetag/>
-        <A:getcontenttype/>
-     </A:prop>
-     <B:filter>
-        <B:comp-filter name="VCALENDAR">
-           <B:comp-filter name="VEVENT">
-              <B:time-range start="20140107T000000Z"/>
-           </B:comp-filter>
-        </B:comp-filter>
-     </B:filter>
-     </B:calendar-query>
-    * */
 }
-
 function handleReportSyncCollection(comm)
 {
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-
     var node = xmlDoc.get('/A:sync-collection', {
         A: 'DAV:',
         B: "urn:ietf:params:xml:ns:caldav",
@@ -1209,26 +978,26 @@ function handleReportSyncCollection(comm)
         D: "http://apple.com/ns/ical/",
         E: "http://me.com/_namespace/"
     });
-
     if(node != undefined)
     {
-        var calendarId = comm.getPathElement(3);
-
-        CAL.find({ where: {pkey: calendarId} } ).then(function(cal)
+        var calendarUri = comm.getPathElement(3);
+        CALENDARS.findOne({ where: {uri: calendarUri} }).then(function(calendar)
         {
-            ICS.findAndCountAll(
-                { where: {calendarId: calendarId}}
-//                { where: {updatedAt: { gte: cal.updatedAt}}}
-            ).then(function(result)
+            if (!calendar) {
+                LSE_logger.error(`[Fennel-NG CalDAV] Calendar not found for sync: ${calendarUri}`);
+                comm.setResponseCode(404);
+                comm.flushResponse();
+                return;
+            }
+            CALENDAROBJECTS.findAll(
+                { where: {calendarid: calendar.id}}
+            ).then(function(events)
             {
                 var response = "";
-
-                for (var j=0; j < result.count; ++j)
+                for (var j=0; j < events.length; ++j)
                 {
-                    var ics = result.rows[j];
-
+                    var event = events[j];
                     var childs = node.childNodes();
-
                     var len = childs.length;
                     for (var i=0; i < len; ++i)
                     {
@@ -1238,45 +1007,33 @@ function handleReportSyncCollection(comm)
                         {
                             case 'sync-token':
                                 break;
-
                             case 'prop':
-                                response += handleReportCalendarProp(comm, child, cal, ics);
+                                response += handleReportCalendarProp(comm, child, calendar, event);
                                 break;
-
                             default:
-                                if(name != 'text') log.warn("P-R: not handled: " + name);
+                                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                                 break;
                         }
                     }
-
                 }
-
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">\r\n");
                 comm.appendResBody(response);
-                comm.appendResBody("<d:sync-token>http://swordlord.org/ns/sync/" + cal.synctoken + "</d:sync-token>");
+                comm.appendResBody("<d:sync-token>http://swordlord.org/ns/sync/" + calendar.synctoken + "</d:sync-token>");
                 comm.appendResBody("</d:multistatus>");
-
                 comm.flushResponse();
             });
         });
     }
 }
-
-function handleReportCalendarProp(comm, node, cal, ics)
+function handleReportCalendarProp(comm, node, calendar, event)
 {
     var response = "";
-
     var reqUrl = comm.getURL();
     reqUrl += reqUrl.match("\/$") ? "" : "/";
-
     response += "<d:response>";
-    response += "<d:href>" + reqUrl + ics.pkey + ".ics</d:href>";
+    response += "<d:href>" + reqUrl + event.uri + "</d:href>";
     response += "<d:propstat><d:prop>";
-
     var childs = node.childNodes();
-
-    var date = Date.parse(ics.updatedAt);
-
     var len = childs.length;
     for (var i=0; i < len; ++i)
     {
@@ -1285,32 +1042,26 @@ function handleReportCalendarProp(comm, node, cal, ics)
         switch(name)
         {
             case 'getetag':
-                response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>";
+                response += "<d:getetag>\"" + event.etag + "\"</d:getetag>";
                 break;
-
             case 'getcontenttype':
-                response += "<d:getcontenttype>text/calendar; charset=utf-8; component=" + cal.supported_cal_component + "</d:getcontenttype>";
+                response += "<d:getcontenttype>text/calendar; charset=utf-8; component=" + event.componenttype + "</d:getcontenttype>";
                 break;
-
             default:
-                if(name != 'text') log.warn("P-R: not handled: " + name);
+                if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                 break;
         }
     }
-
     response += "</d:prop>";
     response += "<d:status>HTTP/1.1 200 OK</d:status>";
     response += "</d:propstat>";
     response += "</d:response>";
-
     return response;
 }
-
 function handleReportCalendarMultiget(comm)
 {
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-
     var node = xmlDoc.get('/B:calendar-multiget', {
         A: 'DAV:',
         B: "urn:ietf:params:xml:ns:caldav",
@@ -1318,13 +1069,10 @@ function handleReportCalendarMultiget(comm)
         D: "http://apple.com/ns/ical/",
         E: "http://me.com/_namespace/"
     });
-
     if(node != undefined)
     {
         var childs = node.childNodes();
-
         var arrHrefs = [];
-
         var len = childs.length;
         for (var i=0; i < len; ++i)
         {
@@ -1332,79 +1080,60 @@ function handleReportCalendarMultiget(comm)
             var name = child.name();
             switch(name)
             {
-                case 'prop': // TODO: theoretically we should first get the parameters ordered by the client, lets do so later :)
+                case 'prop':
                     break;
-
                 case 'href':
-                    arrHrefs.push(parseHrefToIcsId(child.text()));
+                    arrHrefs.push(parseHrefToEventUri(child.text()));
                     break;
-
                 default:
-                    if(name != 'text') log.warn("P-R: not handled: " + name);
+                    if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${name}`);
                     break;
             }
         }
-
         handleReportHrefs(comm, arrHrefs);
     }
 }
-
-function parseHrefToIcsId(href)
+function parseHrefToEventUri(href)
 {
     var e = href.split("/");
-    var id = e[e.length - 1];
-
-    return id.substr(0, id.length - 4);
+    var uri = e[e.length - 1];
+    return uri;
 }
-
-function handleReportHrefs(comm, arrIcsIds)
+function handleReportHrefs(comm, arrEventUris)
 {
-    ICS.findAndCountAll( { where: {pkey: arrIcsIds}}).then(function(result)
+    CALENDAROBJECTS.findAll( { where: {uri: arrEventUris}}).then(function(events)
     {
         var response = "";
-
-        for (var i=0; i < result.count; ++i)
+        for (var i=0; i < events.length; ++i)
         {
-            var ics = result.rows[i];
-
-            var date = Date.parse(ics.updatedAt);
-
+            var event = events[i];
             var reqUrl = comm.getURL();
             reqUrl += reqUrl.match("\/$") ? "" : "/";
-
             response += "<d:response>";
-            response += "<d:href>" + reqUrl + ics.pkey + ".ics</d:href>";
+            response += "<d:href>" + reqUrl + event.uri + "</d:href>";
             response += "<d:propstat><d:prop>";
-            response += "<cal:calendar-data>" + ics.content + "</cal:calendar-data>";
-            response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>";
+            response += "<cal:calendar-data>" + event.calendardata.toString() + "</cal:calendar-data>";
+            response += "<d:getetag>\"" + event.etag + "\"</d:getetag>";
             response += "</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>";
             response += "<d:propstat><d:prop>";
             response += "<cs:created-by/><cs:updated-by/>";
             response += "</d:prop><d:status>HTTP/1.1 404 Not Found</d:status></d:propstat>";
             response += "</d:response>";
         }
-
         comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">\r\n");
         comm.appendResBody(response);
         comm.appendResBody("</d:multistatus>\r\n");
-
         comm.flushResponse();
     });
 }
-
 function proppatch(comm)
 {
-    log.debug("calendar.proppatch called");
-
+    LSE_logger.debug(`[Fennel-NG CalDAV] calendar.proppatch called`);
     comm.setStandardHeaders();
-
     comm.setResponseCode(200);
-
     comm.appendResBody(xh.getXMLHead());
-
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-
     var node = xmlDoc.get('/A:propertyupdate/A:set/A:prop', {
         A: 'DAV:',
         B: "urn:ietf:params:xml:ns:caldav",
@@ -1413,11 +1142,7 @@ function proppatch(comm)
         E: "http://me.com/_namespace/"
     });
     var childs = node.childNodes();
-
     var isRoot = true;
-
-    // if URL element size === 4, this is a call for the root URL of a user.
-    // TODO:
     if(comm.getUrlElementSize() > 4)
     {
         var lastPathElement = comm.getFilenameFromPath(false);
@@ -1426,18 +1151,15 @@ function proppatch(comm)
             isRoot = false;
         }
     }
-
     var response = "";
-
     if(isRoot)
     {
-        var calendarId = comm.getCalIdFromURL();
-        CAL.find({ where: {pkey: calendarId} }).then(function(cal)
+        var calendarUri = comm.getCalIdFromURL();
+        CALENDARS.findOne({ where: {uri: calendarUri} }).then(function(calendar)
         {
-            if(cal === null)
+            if(calendar === null)
             {
-                log.warn('Calendar not found');
-
+                LSE_logger.warn(`[Fennel-NG CalDAV] Calendar not found for proppatch`);
                 var len = childs.length;
                 for (var i=0; i < len; ++i)
                 {
@@ -1447,20 +1169,17 @@ function proppatch(comm)
                     {
                         case 'default-alarm-vevent-date':
                             response += "<cal:default-alarm-vevent-date/>";
-                            log.info("proppatch default-alarm-vevent-date not handled yet");
+                            LSE_logger.info(`[Fennel-NG CalDAV] proppatch default-alarm-vevent-date not handled yet`);
                             break;
-
                         case 'default-alarm-vevent-datetime':
                             response += "<cal:default-alarm-vevent-datetime/>";
-                            log.info("proppatch default-alarm-vevent-datetime not handled yet");
+                            LSE_logger.info(`[Fennel-NG CalDAV] proppatch default-alarm-vevent-datetime not handled yet`);
                             break;
-
                         default:
-                            if(name != 'text') log.warn("CAL-PP: not handled: " + name);
+                            if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] CAL-PP: not handled: ${name}`);
                             break;
                     }
                 }
-
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">\r\n");
                 comm.appendResBody("	<d:response>\r\n");
                 comm.appendResBody("		<d:href>" + comm.getURL() + "</d:href>\r\n");
@@ -1484,45 +1203,41 @@ function proppatch(comm)
                     {
                         case 'default-alarm-vevent-date':
                             response += "<cal:default-alarm-vevent-date/>";
-                            log.info("proppatch default-alarm-vevent-date not handled yet");
+                            LSE_logger.info(`[Fennel-NG CalDAV] proppatch default-alarm-vevent-date not handled yet`);
                             break;
-
                         case 'default-alarm-vevent-datetime':
                             response += "<cal:default-alarm-vevent-datetime/>";
-                            log.info("proppatch default-alarm-vevent-datetime not handled yet");
+                            LSE_logger.info(`[Fennel-NG CalDAV] proppatch default-alarm-vevent-datetime not handled yet`);
                             break;
-
                         case 'displayname':
                             response += "<cal:displayname>" + child.text() + "</cal:displayname>";
-                            cal.displayname = child.text();
+                            calendar.displayname = child.text();
                             break;
-
                         case 'calendar-timezone':
                             response += "<cal:calendar-timezone/>";
-                            cal.timezone = child.text();
+                            calendar.timezone = child.text();
                             break;
-
                         case 'calendar-color':
                             response += "<ical:calendar-color>" + child.text() + "</ical:calendar-color>";
-                            cal.colour = child.text();
+                            calendar.calendarcolor = child.text();
                             break;
-
                         case 'calendar-order':
                             response += "<ical:calendar-order/>";
-                            cal.order = child.text();
+                            calendar.calendarorder = parseInt(child.text()) || 0;
                             break;
-
+                        case 'calendar-description':
+                            response += "<cal:calendar-description/>";
+                            calendar.description = child.text();
+                            break;
                         default:
-                            if(name != 'text') log.warn("CAL-PP: not handled: " + name);
+                            if(name != 'text') LSE_logger.warn(`[Fennel-NG CalDAV] CAL-PP: not handled: ${name}`);
                             break;
                     }
                 }
-
-                cal.save().then(function()
+                calendar.save().then(function()
                 {
-                    log.warn('cal saved');
+                    LSE_logger.info(`[Fennel-NG CalDAV] calendar saved`);
                 });
-
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">\r\n");
                 comm.appendResBody("	<d:response>\r\n");
                 comm.appendResBody("		<d:href>" + comm.getURL() + "</d:href>\r\n");
@@ -1535,20 +1250,16 @@ function proppatch(comm)
                 comm.appendResBody("	</d:response>\r\n");
                 comm.appendResBody("</d:multistatus>\r\n");
             }
-
             comm.flushResponse();
         });
     }
 }
-
 function returnOutbox(comm)
 {
     var response = "";
-
     var username = comm.getUser().getUserName();
-
     response += "<d:response>";
-    response += "   <d:href>/cal/" + username + "/outbox/</d:href>";
+    response += "   <d:href>/fennel-ng/cal/" + username + "/outbox/</d:href>";
     response += "    <d:propstat>";
     response += "        <d:prop>";
     response += "            <d:current-user-privilege-set>";
@@ -1569,7 +1280,7 @@ function returnOutbox(comm)
     response += "               </d:privilege>";
     response += "           </d:current-user-privilege-set>";
     response += "           <d:owner>";
-    response += "               <d:href>/p/" + username + "/</d:href>";
+    response += "               <d:href>/fennel-ng/p/" + username + "/</d:href>";
     response += "           </d:owner>";
     response += "           <d:resourcetype>";
     response += "              <d:collection/>";
@@ -1596,18 +1307,14 @@ function returnOutbox(comm)
     response += "       <d:status>HTTP/1.1 200 OK</d:status>";
     response += "   </d:propstat>";
     response += "</d:response>";
-
     return response;
 }
-
 function returnNotifications(comm)
 {
     var response = "";
-
     var username = comm.getUser().getUserName();
-
     response += "<d:response>";
-    response += "<d:href>/cal/" + username + "/notifications/</d:href>";
+    response += "<d:href>/fennel-ng/cal/" + username + "/notifications/</d:href>";
     response += "<d:propstat>";
     response += "    <d:prop>";
     response += "        <d:current-user-privilege-set>";
@@ -1643,7 +1350,7 @@ function returnNotifications(comm)
     response += "            </d:privilege>";
     response += "       </d:current-user-privilege-set>";
     response += "       <d:owner>";
-    response += "           <d:href>/p/" + username + "/</d:href>";
+    response += "           <d:href>/fennel-ng/p/" + username + "/</d:href>";
     response += "       </d:owner>";
     response += "       <d:resourcetype>";
     response += "           <d:collection/>";
@@ -1670,6 +1377,7 @@ function returnNotifications(comm)
     response += "<d:status>HTTP/1.1 200 OK</d:status>";
     response += "</d:propstat>";
     response += "</d:response>";
-
     return response;
 }
+
+

@@ -1,0 +1,168 @@
+var xml = require("libxmljs");
+var xh = require("../libs/xmlhelper");
+var LSE_logger = require('LSE_logger');
+var principalUtil = require('./principal-util');
+module.exports = {
+    propfind: propfind,
+    report: report
+};
+function propfind(comm)
+{
+    LSE_logger.debug(`[Fennel-NG Principal] principal.propfind called`);
+    comm.setStandardHeaders();
+    comm.setDAVHeaders();
+    comm.setResponseCode(207);
+    comm.appendResBody(xh.getXMLHead());
+    var body = comm.getReqBody();
+    var xmlDoc = xml.parseXml(body);
+    var node = xmlDoc.get('/A:propfind/A:prop', {
+        A: 'DAV:',
+        B: "urn:ietf:params:xml:ns:caldav",
+        C: 'http://calendarserver.org/ns/',
+        D: "http://apple.com/ns/ical/",
+        E: "http://me.com/_namespace/"
+    });
+    var childs = node.childNodes();
+    var response = "";
+    var len = childs.length;
+    for (var i=0; i < len; ++i)
+    {
+        var child = childs[i];
+        var name = child.name();
+        switch(name)
+        {
+            case 'checksum-versions':
+                response += "";
+                break;
+            case 'sync-token':
+                response += "<d:sync-token>http://sabredav.org/ns/sync/5</d:sync-token>";
+                break;
+            case 'supported-report-set':
+                response += principalUtil.getSupportedReportSet(comm);
+                break;
+            case 'principal-URL':
+                response += "<d:principal-URL><d:href>/p/" + comm.getUser().getUserName() + "/</d:href></d:principal-URL>\r\n";
+                break;
+            case 'displayname':
+                response += "<d:displayname>" + comm.getUser().getUserName() + "</d:displayname>";
+                break;
+            case 'principal-collection-set':
+                response += "<d:principal-collection-set><d:href>/p/</d:href></d:principal-collection-set>";
+                break;
+            case 'current-user-principal':
+                response += "<d:current-user-principal><d:href>/p/" + comm.getUser().getUserName() + "/</d:href></d:current-user-principal>";
+                break;
+            case 'calendar-home-set':
+                response += "<cal:calendar-home-set><d:href>/cal/" + comm.getUser().getUserName() + "</d:href></cal:calendar-home-set>";
+                break;
+            case 'schedule-outbox-URL':
+                response += "<cal:schedule-outbox-URL><d:href>/cal/" + comm.getUser().getUserName() + "/outbox</d:href></cal:schedule-outbox-URL>";
+                break;
+            case 'calendar-user-address-set':
+                response += principalUtil.getCalendarUserAddressSet(comm);
+                break;
+            case 'notification-URL':
+                response += "<cs:notification-URL><d:href>/cal/" + comm.getUser().getUserName() + "/notifications/</d:href></cs:notification-URL>";
+                break;
+            case 'getcontenttype':
+                response += "";
+                break;
+            case 'addressbook-home-set':
+                response += "<card:addressbook-home-set><d:href>/card/" + comm.getUser().getUserName() + "/</d:href></card:addressbook-home-set>";
+                break;
+            case 'directory-gateway':
+                response += "";
+                break;
+            case 'email-address-set':
+                response += "<cs:email-address-set><cs:email-address>lord test at swordlord.com</cs:email-address></cs:email-address-set>";
+                break;
+            case 'resource-id':
+                response += "";
+                break;
+            default:
+                if(name != 'text') LSE_logger.warn(`[Fennel-NG Principal] P-PF: not handled: ${name}`);
+                break;
+        }
+    }
+    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
+    comm.appendResBody("<d:response><d:href>" + comm.getURL() + "</d:href>");
+    comm.appendResBody("<d:propstat>");
+    comm.appendResBody("<d:prop>");
+    comm.appendResBody(response);
+    comm.appendResBody("</d:prop>");
+    comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>");
+    comm.appendResBody("</d:propstat>");
+    comm.appendResBody("</d:response>");
+    comm.appendResBody("</d:multistatus>");
+    comm.flushResponse();
+}
+function report(comm)
+{
+    LSE_logger.debug(`[Fennel-NG Principal] principal.report called`);
+    comm.setStandardHeaders();
+    var body = comm.getReqBody();
+    if(!body)
+    {
+        LSE_logger.warn(`[Fennel-NG Principal] principal.report called with no body`);
+        comm.setResponseCode(500);
+        comm.appendResBody("Internal Server Error");
+        comm.flushResponse();
+        return;
+    }
+    comm.setResponseCode(200);
+    comm.appendResBody(xh.getXMLHead());
+    var xmlDoc = xml.parseXml(body);
+    var node = xmlDoc.get('/A:propfind/A:prop', {
+        A: 'DAV:',
+        B: "urn:ietf:params:xml:ns:caldav",
+        C: 'http://calendarserver.org/ns/',
+        D: "http://apple.com/ns/ical/",
+        E: "http://me.com/_namespace/"
+    });
+    var response = "";
+    if(node != undefined)
+    {
+        var childs = node.childNodes();
+        var len = childs.length;
+        for (var i=0; i < len; ++i)
+        {
+            var child = childs[i];
+            var name = child.name();
+            switch(name)
+            {
+                case 'principal-search-property-set':
+                    response += principalUtil.getPrincipalSearchPropertySet(comm);
+                    break;
+                default:
+                    if(name != 'text') LSE_logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
+                    break;
+            }
+        }
+    }
+    node = xmlDoc.get('/A:principal-search-property-set', {
+        A: 'DAV:',
+        B: "urn:ietf:params:xml:ns:caldav",
+        C: 'http://calendarserver.org/ns/',
+        D: "http://apple.com/ns/ical/",
+        E: "http://me.com/_namespace/"
+    });
+    if(node != undefined)
+    {
+        var name = node.name();
+        switch(name)
+        {
+            case 'principal-search-property-set':
+                response += principalUtil.getPrincipalSearchPropertySet(comm);
+                break;
+            default:
+                if(name != 'text') LSE_logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
+                break;
+        }
+    }
+    comm.appendResBody(response);
+    if(principalUtil.isReportPropertyCalendarProxyWriteFor(comm))
+    {
+        principalUtil.replyPropertyCalendarProxyWriteFor(comm);
+    }
+    comm.flushResponse();
+}
