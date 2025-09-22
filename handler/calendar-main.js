@@ -15,8 +15,8 @@ var calendarRead = require('./calendar-read');
 var calendarDel = require('./calendar-del');
 var calendarMove = require('./calendar-move');
 var db = require('../libs/db');
-var CALENDARS = db.calendars;
-var CALENDAROBJECTS = db.calendarObjects;
+var CALENDARS = db.CALENDARS;
+var CALENDAROBJECTS = db.CALENDAROBJECTS;
 var moment = require('moment');
 var uuid = require('uuid');
 var xh = require('../libs/xmlhelper');
@@ -369,6 +369,7 @@ function proppatch(comm)
 }
 function handlePropfindForUser(comm)
 {
+    LSE_Logger.debug(`[Fennel-NG CalDAV] handlePropfindForUser called`);
     comm.setStandardHeaders();
     comm.setDAVHeaders();
     comm.setResponseCode(207);
@@ -378,20 +379,35 @@ function handlePropfindForUser(comm)
     response += getCalendarRootNodeResponse(comm, []);
     var username = comm.getUser().getUserName();
     var userPrincipalUri = 'principals/' + username;
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Finding calendars for user: ${userPrincipalUri}`);
     CALENDARS.findAll({ where: {principaluri: userPrincipalUri}, order: [['calendarorder', 'ASC']] }).then(function(calendars)
     {
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Found ${calendars.length} calendars for user ${username}`);
         for (var i=0; i < calendars.length; ++i)
         {
             var calendar = calendars[i];
-            response += returnCalendar(comm, calendar, []);
+            LSE_Logger.debug(`[Fennel-NG CalDAV] Processing calendar ${i}: ${JSON.stringify({id: calendar.id, uri: calendar.uri, displayname: calendar.displayname, components: calendar.components})}`);
+            LSE_Logger.debug(`[Fennel-NG CalDAV] Calendar components type: ${typeof calendar.components}, value: ${calendar.components}`);
+            LSE_Logger.debug(`[Fennel-NG CalDAV] Calendar components Buffer check: ${Buffer.isBuffer(calendar.components)}`);
+            try {
+                response += returnCalendar(comm, calendar, []);
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Successfully processed calendar ${calendar.uri}`);
+            } catch (error) {
+                LSE_Logger.error(`[Fennel-NG CalDAV] Error processing calendar ${calendar.uri}: ${error.message}`);
+                LSE_Logger.error(`[Fennel-NG CalDAV] Calendar object: ${JSON.stringify(calendar.dataValues || calendar)}`);
+                LSE_Logger.error(`[Fennel-NG CalDAV] Stack trace: ${error.stack}`);
+                throw error;
+            }
         }
         response += calendarUtil.returnOutbox(comm);
         response += calendarUtil.returnNotifications(comm);
         response += "</d:multistatus>";
         comm.appendResBody(response);
         comm.flushResponse();
+        LSE_Logger.debug(`[Fennel-NG CalDAV] handlePropfindForUser completed successfully`);
     }).catch(function(error) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] Error finding calendars: ${error}`);
+        LSE_Logger.error(`[Fennel-NG CalDAV] Error finding calendars: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG CalDAV] Stack trace: ${error.stack}`);
         comm.setResponseCode(500);
         comm.flushResponse();
     });
@@ -401,11 +417,11 @@ function getCalendarRootNodeResponse(comm, childs)
     var username = comm.getUser().getUserName();
     var response = "";
     response += "<d:response>";
-    response += "<d:href>" + comm.getURL() + "</d:href>";
+    response += "<d:href>" + comm.getFullURL(comm.getURL()) + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
     response += "<d:displayname>Calendar Home</d:displayname>";
-    response += "<d:owner><d:href>/p/" + username + "</d:href></d:owner>";
+    response += "<d:owner><d:href>" + comm.getPrincipalURL(username) + "</d:href></d:owner>";
     response += "<d:resourcetype><d:collection/></d:resourcetype>";
     response += calendarUtil.getSupportedReportSet(true);
     response += calendarUtil.getCurrentUserPrivilegeSet();
@@ -417,28 +433,55 @@ function getCalendarRootNodeResponse(comm, childs)
 }
 function returnCalendar(comm, calendar, childs)
 {
+    LSE_Logger.debug(`[Fennel-NG CalDAV] returnCalendar called for calendar: ${calendar.uri}`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Calendar components at start of returnCalendar: type=${typeof calendar.components}, value="${calendar.components}", isBuffer=${Buffer.isBuffer(calendar.components)}`);
     var username = comm.getUser().getUserName();
-    var calUrl = comm.getURL();
-    if(!calUrl.endsWith('/')) calUrl += '/';
     var response = "";
     response += "<d:response>";
-    response += "<d:href>" + calUrl + calendar.uri + "/</d:href>";
+    response += "<d:href>" + comm.getCalendarURL(username, calendar.uri) + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
-    response += "<d:displayname>" + calendar.displayname + "</d:displayname>";
-    response += "<d:owner><d:href>/p/" + username + "</d:href></d:owner>";
+    response += "<d:displayname>" + (calendar.displayname || 'Calendar') + "</d:displayname>";
+    response += "<d:owner><d:href>" + comm.getPrincipalURL(username) + "</d:href></d:owner>";
     response += "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>";
     response += "<cal:supported-calendar-component-set>";
-    var components = calendar.components.split(',');
-    for(var i = 0; i < components.length; i++) {
-        response += "<cal:comp name=\"" + components[i].trim() + "\"/>";
+    var components;
+    if (Buffer.isBuffer(calendar.components)) {
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Converting Buffer to string for components`);
+        components = calendar.components.toString('utf8');
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Converted components: "${components}"`);
+    } else if (typeof calendar.components === 'string') {
+        components = calendar.components;
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Using string components: "${components}"`);
+    } else if (calendar.components === null || calendar.components === undefined) {
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Components is null/undefined, using default`);
+        components = 'VEVENT';
+    } else {
+        LSE_Logger.warn(`[Fennel-NG CalDAV] Unexpected components type: ${typeof calendar.components}, value: ${calendar.components}`);
+        components = 'VEVENT';
+    }
+    try {
+        if (typeof components !== 'string') {
+            throw new Error(`Components is not a string after processing: type=${typeof components}, value=${components}`);
+        }
+        var componentArray = components.split(',');
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Split components into array: ${JSON.stringify(componentArray)}`);
+        for(var i = 0; i < componentArray.length; i++) {
+            var component = componentArray[i].trim();
+            LSE_Logger.debug(`[Fennel-NG CalDAV] Adding component: "${component}"`);
+            response += "<cal:comp name=\"" + component + "\"/>";
+        }
+    } catch (splitError) {
+        LSE_Logger.error(`[Fennel-NG CalDAV] Error splitting components: ${splitError.message}`);
+        LSE_Logger.error(`[Fennel-NG CalDAV] Components value: ${components}, type: ${typeof components}`);
+        response += "<cal:comp name=\"VEVENT\"/>";
     }
     response += "</cal:supported-calendar-component-set>";
-    response += "<d:sync-token>http://sabre.io/ns/sync/" + calendar.synctoken + "</d:sync-token>";
+    response += "<d:sync-token>http://sabre.io/ns/sync/" + (calendar.synctoken || 1) + "</d:sync-token>";
     if(calendar.calendarcolor) {
         response += "<xical:calendar-color xmlns:xical=\"http://apple.com/ns/ical/\">" + calendar.calendarcolor + "</xical:calendar-color>";
     }
-    if(calendar.calendarorder !== null) {
+    if(calendar.calendarorder !== null && calendar.calendarorder !== undefined) {
         response += "<xical:calendar-order xmlns:xical=\"http://apple.com/ns/ical/\">" + calendar.calendarorder + "</xical:calendar-order>";
     }
     response += calendarUtil.getSupportedReportSet(false);
@@ -447,6 +490,7 @@ function returnCalendar(comm, calendar, childs)
     response += "<d:status>HTTP/1.1 200 OK</d:status>";
     response += "</d:propstat>";
     response += "</d:response>";
+    LSE_Logger.debug(`[Fennel-NG CalDAV] returnCalendar completed for calendar: ${calendar.uri}`);
     return response;
 }
 function report(comm)

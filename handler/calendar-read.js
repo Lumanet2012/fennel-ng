@@ -673,4 +673,3 @@ function handleReportHrefs(comm, arrEventUris)
         comm.flushResponse();
     });
 }
-
