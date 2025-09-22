@@ -1,4 +1,4 @@
-// XML parsing temporarily disabled
+const { XMLParser } = require('fast-xml-parser');
 function getCalendarUserAddressSet(comm)
 {
     var response = "";
@@ -46,9 +46,23 @@ function getPrincipalSearchPropertySet(comm)
 function isReportPropertyCalendarProxyWriteFor(comm)
 {
     var body = comm.getReqBody();
-    var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.get('/A:expand-property/A:property[@name=\'calendar-proxy-write-for\']', { A: 'DAV:', C: 'http://calendarserver.org/ns/'});
-    return typeof node != 'undefined';
+    if (!body) return false;
+    try {
+        const parser = new XMLParser({
+            ignoreAttributes: false,
+            attributeNamePrefix: "@_",
+            textNodeName: "#text"
+        });
+        var xmlDoc = parser.parse(body);
+        var node = xmlDoc['A:expand-property'] && xmlDoc['A:expand-property']['A:property'];
+        if (node && node['@_name'] === 'calendar-proxy-write-for') {
+            return true;
+        }
+        return false;
+    } catch (err) {
+        LSE_Logger.error(`[Fennel-NG Principal] XML parsing error: ${err.message}`);
+        return false;
+    }
 }
 function replyPropertyCalendarProxyWriteFor(comm)
 {
@@ -67,6 +81,7 @@ function replyPropertyCalendarProxyWriteFor(comm)
     comm.appendResBody("</d:multistatus>\r\n");
 }
 module.exports = {
+    getCalendarUserAddressSet: getCalendarUserAddressSet,
     getSupportedReportSet: getSupportedReportSet,
     getPrincipalSearchPropertySet: getPrincipalSearchPropertySet,
     isReportPropertyCalendarProxyWriteFor: isReportPropertyCalendarProxyWriteFor,
