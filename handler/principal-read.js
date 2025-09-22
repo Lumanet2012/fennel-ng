@@ -34,34 +34,34 @@ function propfind(comm)
                 response += principalUtil.getSupportedReportSet(comm);
                 break;
             case 'principal-URL':
-                response += "<d:principal-URL><d:href>/p/" + comm.getUser().getUserName() + "/</d:href></d:principal-URL>\r\n";
+                response += "<d:principal-URL><d:href>" + comm.getFullURL("/p/") + comm.getUser().getUserName() + "/</d:href></d:principal-URL>\r\n";
                 break;
             case 'displayname':
                 response += "<d:displayname>" + comm.getUser().getUserName() + "</d:displayname>";
                 break;
             case 'principal-collection-set':
-                response += "<d:principal-collection-set><d:href>/p/</d:href></d:principal-collection-set>";
+                response += "<d:principal-collection-set><d:href>" + comm.getFullURL("/p/") + "</d:href></d:principal-collection-set>";
                 break;
             case 'current-user-principal':
-                response += "<d:current-user-principal><d:href>/p/" + comm.getUser().getUserName() + "/</d:href></d:current-user-principal>";
+                response += "<d:current-user-principal><d:href>"  + comm.getFullURL("/p/") + comm.getUser().getUserName() + "/</d:href></d:current-user-principal>";
                 break;
             case 'calendar-home-set':
-                response += "<cal:calendar-home-set><d:href>/cal/" + comm.getUser().getUserName() + "</d:href></cal:calendar-home-set>";
+                response += "<cal:calendar-home-set><d:href>"  + comm.getFullURL("/cal/") + comm.getUser().getUserName() + "</d:href></cal:calendar-home-set>";
                 break;
             case 'schedule-outbox-URL':
-                response += "<cal:schedule-outbox-URL><d:href>/cal/" + comm.getUser().getUserName() + "/outbox</d:href></cal:schedule-outbox-URL>";
+                response += "<cal:schedule-outbox-URL><d:href>" + comm.getFullURL("/cal/") + comm.getUser().getUserName() + "/outbox</d:href></cal:schedule-outbox-URL>";
                 break;
             case 'calendar-user-address-set':
                 response += principalUtil.getCalendarUserAddressSet(comm);
                 break;
             case 'notification-URL':
-                response += "<cs:notification-URL><d:href>/cal/" + comm.getUser().getUserName() + "/notifications/</d:href></cs:notification-URL>";
+                response += "<cs:notification-URL><d:href>"  + comm.getFullURL("/cal/") + comm.getUser().getUserName() + "/notifications/</d:href></cs:notification-URL>";
                 break;
             case 'getcontenttype':
                 response += "";
                 break;
             case 'addressbook-home-set':
-                response += "<card:addressbook-home-set><d:href>/card/" + comm.getUser().getUserName() + "/</d:href></card:addressbook-home-set>";
+                response += "<card:addressbook-home-set><d:href>"  + comm.getFullURL("/card/") + comm.getUser().getUserName() + "/</d:href></card:addressbook-home-set>";
                 break;
             case 'directory-gateway':
                 response += "";
@@ -78,7 +78,7 @@ function propfind(comm)
         }
     }
     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
-    comm.appendResBody("<d:response><d:href>" + comm.getURL() + "</d:href>");
+    comm.appendResBody("<d:response><d:href>" + comm.getFullURL(comm.getURL()) + "</d:href>");
     comm.appendResBody("<d:propstat>");
     comm.appendResBody("<d:prop>");
     comm.appendResBody(response);

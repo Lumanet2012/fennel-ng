@@ -23,47 +23,21 @@ function handlePrincipal(request)
             LSE_Logger.info(`[Fennel-NG Principal] Request method is unknown: ${method}`);
             res.writeHead(500);
             res.write(method + " is not implemented yet");
+            res.end();
             break;
     }
 }
 function handleCalendar(request)
 {
     var method = request.getReq().method;
-    switch(method)
+    var urlElements = request.getUrlElementSize();
+    if(urlElements === 3)
     {
-        case 'PROPFIND':
-            cal.propfind(request);
-            break;
-        case 'PROPPATCH':
-            cal.proppatch(request);
-            break;
-        case 'OPTIONS':
-            cal.options(request);
-            break;
-        case 'REPORT':
-            cal.report(request);
-            break;
-        case 'MKCALENDAR':
-            cal.makeCalendar(request);
-            break;
-        case 'PUT':
-            cal.put(request);
-            break;
-        case 'GET':
-            cal.get(request);
-            break;
-        case 'DELETE':
-            cal.delete(request);
-            break;
-        case 'MOVE':
-            cal.move(request);
-            break;
-        default:
-            var res = request.getRes();
-            LSE_Logger.info(`[Fennel-NG CalDAV] Request method is unknown: ${method}`);
-            res.writeHead(500);
-            res.write(method + " is not implemented yet");
-            break;
+        cal.handleRoot(request);
+    }
+    else
+    {
+        cal.handleCalendar(request);
     }
 }
 function handleCard(request)
@@ -100,11 +74,28 @@ function handleCard(request)
             LSE_Logger.info(`[Fennel-NG CardDAV] Request method is unknown: ${method}`);
             res.writeHead(500);
             res.write(method + " is not implemented yet");
+            res.end();
             break;
     }
+}
+function handleAddressbook(request)
+{
+    handleCard(request);
+}
+function handleCalendarRoot(request)
+{
+    cal.handleRoot(request);
+}
+function handleAddressbookRoot(request)
+{
+    card.propfind(request);
 }
 module.exports = {
     handlePrincipal: handlePrincipal,
     handleCalendar: handleCalendar,
-    handleCard: handleCard
+    handleCard: handleCard,
+    handleAddressbook: handleAddressbook,
+    handleCalendarRoot: handleCalendarRoot,
+    handleAddressbookRoot: handleAddressbookRoot
 };
+

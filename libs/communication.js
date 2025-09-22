@@ -12,6 +12,7 @@ function comm(req, res, reqBody, authResult)
     this.resBody = "";
     this.authResult = authResult || null;
     this.sessionId = null;
+    this.routePrefix = config.public_route_prefix || '';
     if(authResult && authResult.success)
     {
         this.user = new userLib.user(authResult.username);
@@ -132,9 +133,16 @@ comm.prototype.getAuthority = function()
 };
 comm.prototype.checkPermission = function(strURL, strMethod)
 {
-    var s = strURL.substr(1).split("/").filter(String).join(":") + ":" + strMethod.toLowerCase();
-    var ret = this.authority.check(s);
-    LSE_Logger.debug(`[Fennel-NG Comm] Checking authority for user '${this.getUser().getUserName()}' for '${s}' with result: ${ret}`);
+    var cleanURL = strURL;
+    if(this.routePrefix && cleanURL.startsWith(this.routePrefix))
+    {
+        cleanURL = cleanURL.substring(this.routePrefix.length);
+    }
+    var urlParts = cleanURL.substr(1).split("/").filter(String);
+    var permissionString = urlParts.join(":") + ":" + strMethod.toLowerCase();
+    LSE_Logger.warn(`[Fennel-NG Comm DEBUG] URL: '${strURL}' -> clean: '${cleanURL}' -> parts: ${JSON.stringify(urlParts)} -> permission: '${permissionString}'`);
+    var ret = this.authority.check(permissionString);
+    LSE_Logger.warn(`[Fennel-NG Comm DEBUG] Permission result for user '${this.getUser().getUserName()}': ${ret}`);
     return ret;
 };
 comm.prototype.getReq = function()
@@ -157,9 +165,57 @@ comm.prototype.getURL = function()
 {
     return this.req.url;
 };
+comm.prototype.getFullURL = function(path)
+{
+    if(!path) {
+        path = this.req.url;
+    }
+    if(this.routePrefix && !path.startsWith(this.routePrefix)) {
+        if(path.startsWith('/')) {
+            return this.routePrefix + path;
+        } else {
+            return this.routePrefix + '/' + path;
+        }
+    }
+    return path;
+};
+comm.prototype.getPrincipalURL = function(username)
+{
+    if(!username) {
+        username = this.getUser().getUserName();
+    }
+    return this.getFullURL(`/p/${username}/`);
+};
+comm.prototype.getCalendarURL = function(username, calendarUri)
+{
+    if(!username) {
+        username = this.getUser().getUserName();
+    }
+    if(calendarUri) {
+        return this.getFullURL(`/cal/${username}/${calendarUri}/`);
+    } else {
+        return this.getFullURL(`/cal/${username}/`);
+    }
+};
+comm.prototype.getCardURL = function(username, addressbookUri)
+{
+    if(!username) {
+        username = this.getUser().getUserName();
+    }
+    if(addressbookUri) {
+        return this.getFullURL(`/card/${username}/${addressbookUri}/`);
+    } else {
+        return this.getFullURL(`/card/${username}/`);
+    }
+};
 comm.prototype.getURLAsArray = function()
 {
-    var aUrl = url.parse(this.req.url).pathname.split("/");
+    var cleanURL = this.req.url;
+    if(this.routePrefix && cleanURL.startsWith(this.routePrefix))
+    {
+        cleanURL = cleanURL.substring(this.routePrefix.length);
+    }
+    var aUrl = url.parse(cleanURL).pathname.split("/");
     if(aUrl.length <= 0)
     {
         LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in comm.getUrlAsArray!`);
@@ -169,7 +225,7 @@ comm.prototype.getURLAsArray = function()
 };
 comm.prototype.getFilenameFromPath = function(removeEnding)
 {
-    var aUrl = url.parse(this.req.url).pathname.split("/");
+    var aUrl = this.getURLAsArray();
     if(aUrl.length <= 0)
     {
         LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in request.getFilenameFromPath`);
@@ -203,4 +259,17 @@ comm.prototype.getUrlElementSize = function()
 comm.prototype.getHeader = function(headerName)
 {
     return this.req.headers[headerName.toLowerCase()];
+};
+comm.prototype.getPathElement = function(index)
+{
+    var aUrl = this.getURLAsArray();
+    if(aUrl && aUrl.length > index)
+    {
+        return aUrl[index];
+    }
+    return undefined;
+};
+comm.prototype.stringEndsWith = function(str, suffix)
+{
+    return str && str.length >= suffix.length && str.substring(str.length - suffix.length) === suffix;
 };

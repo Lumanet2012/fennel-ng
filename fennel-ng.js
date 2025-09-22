@@ -38,7 +38,8 @@ function initializeFennelNG()
         LSE_Logger.info('[Fennel-NG] Routes configured successfully');
         return {
             status: 'initialized',
-            middleware: handleRequest,
+            middleware: createExpressMiddleware(),
+            handleRequest: handleRequest,
             healthCheck: healthCheck,
             routes: getRoutes()
         };
@@ -48,19 +49,16 @@ function initializeFennelNG()
         throw error;
     });
 }
-function setupRoutes()
-{
+function setupRoutes() {
     var prefix = config.public_route_prefix || '';
-    crossroads.addRoute('/p/:params*:', onHitPrincipal);
-    crossroads.addRoute('/cal/:username:/:cal:/:params*:', onHitCalendar);
-    crossroads.addRoute('/card/:username:/:card:/:params*:', onHitAddressbook);
-    if(prefix) {
-        crossroads.addRoute(prefix + '/p/:params*:', onHitPrincipal);
-        crossroads.addRoute(prefix + '/cal/:username:/:cal:/:params*:', onHitCalendar);
-        crossroads.addRoute(prefix + '/card/:username:/:card:/:params*:', onHitAddressbook);
-        crossroads.addRoute(prefix + '/cal/', onHitCalendarRoot);
-        crossroads.addRoute(prefix + '/card/', onHitAddressbookRoot);
-    }
+    crossroads.addRoute(prefix + '/', onHitRoot);
+    crossroads.addRoute(prefix + '/.well-known/{type}', onHitWellKnown);
+    crossroads.addRoute(prefix + '/p/{params*}', onHitPrincipal);
+    crossroads.addRoute(prefix + '/cal/', onHitCalendarRoot);
+    crossroads.addRoute(prefix + '/cal/{username}/{params*}', onHitCalendar);
+    crossroads.addRoute(prefix + '/card/', onHitAddressbookRoot);
+    crossroads.addRoute(prefix + '/card/{username}/{params*}', onHitAddressbook);
+    crossroads.bypassed.add(onBypass);
 }
 function onBypass(comm, path)
 {
@@ -73,23 +71,19 @@ function onBypass(comm, path)
 function onHitRoot(comm)
 {
     LSE_Logger.debug('[Fennel-NG] Called root, redirecting to /p/');
-    comm.getRes().writeHead(302, {
-        'Location': '/p/'
-    });
+    comm.getRes().writeHead(302, { 'Location': comm.getFullURL('/p/') });
     comm.flushResponse();
 }
-function onHitWellKnown(comm, params)
+function onHitWellKnown(comm, type)
 {
-    LSE_Logger.debug(`[Fennel-NG] Called .well-known URL for ${params}, redirecting to /p/`);
-    comm.getRes().writeHead(302, {
-        'Location': '/p/'
-    });
-    comm.flushResponse();
+    LSE_Logger.debug(`[Fennel-NG] Called .well-known URL for ${type}, redirecting to /p/`);
+    let location = type === 'caldav' ? '/cal/' : (type === 'carddav' ? '/card/' : '/p/');
+    comm.getRes().writeHead(302, { 'Location': comm.getFullURL(location) });
 }
 function onHitPrincipal(comm, params)
 {
     comm.params = params;
-    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    if(!comm.checkPermission('/p/' + (params || ''), comm.getReq().method))
     {
         var res = comm.getRes();
         LSE_Logger.warn(`[Fennel-NG] Request denied for user: ${comm.getUser().getUserName()}`);
@@ -100,12 +94,12 @@ function onHitPrincipal(comm, params)
     }
     handler.handlePrincipal(comm);
 }
-function onHitCalendar(comm, username, cal, params)
+function onHitCalendar(comm, username, params)
 {
     comm.username = username;
-    comm.cal = cal;
     comm.params = params;
-    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    var calendarPath = comm.getFullURL("/cal/") + username + "/" + (params || '');
+    if(!comm.checkPermission(calendarPath, comm.getReq().method))
     {
         var res = comm.getRes();
         LSE_Logger.warn(`[Fennel-NG] Calendar request denied for user: ${comm.getUser().getUserName()}`);
@@ -116,31 +110,15 @@ function onHitCalendar(comm, username, cal, params)
     }
     handler.handleCalendar(comm);
 }
-function onHitCard(comm, username, card, params)
+function onHitAddressbook(comm, username, params)
 {
     comm.username = username;
-    comm.card = card;
     comm.params = params;
-    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    var addressbookPath = comm.getFullURL("/card/") + username + "/" + (params || '');
+    if(!comm.checkPermission(addressbookPath, comm.getReq().method))
     {
         var res = comm.getRes();
         LSE_Logger.warn(`[Fennel-NG] CardDAV request denied for user: ${comm.getUser().getUserName()}`);
-        res.writeHead(403);
-        res.write("Access denied to this addressbook resource");
-        res.end();
-        return;
-    }
-    handler.handleCard(comm);
-}
-function onHitAddressbook(comm, username, card, params)
-{
-    comm.username = username;
-    comm.card = card;
-    comm.params = params;
-    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
-    {
-        var res = comm.getRes();
-        LSE_Logger.warn(`[Fennel-NG] Addressbook request denied for user: ${comm.getUser().getUserName()}`);
         res.writeHead(403);
         res.write("Access denied to this addressbook resource");
         res.end();
@@ -151,7 +129,7 @@ function onHitAddressbook(comm, username, card, params)
 function onHitCalendarRoot(comm)
 {
     LSE_Logger.debug('[Fennel-NG] Called calendar root');
-    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    if(!comm.checkPermission('/cal/', comm.getReq().method))
     {
         var res = comm.getRes();
         LSE_Logger.warn(`[Fennel-NG] Calendar root request denied for user: ${comm.getUser().getUserName()}`);
@@ -165,7 +143,7 @@ function onHitCalendarRoot(comm)
 function onHitAddressbookRoot(comm)
 {
     LSE_Logger.debug('[Fennel-NG] Called addressbook root');
-    if(!comm.checkPermission(comm.getURL(), comm.getReq().method))
+    if(!comm.checkPermission('/card/', comm.getReq().method))
     {
         var res = comm.getRes();
         LSE_Logger.warn(`[Fennel-NG] Addressbook root request denied for user: ${comm.getUser().getUserName()}`);
@@ -179,6 +157,13 @@ function onHitAddressbookRoot(comm)
 function handleRequest(req, res, next)
 {
     LSE_Logger.debug(`[Fennel-NG] ${req.method} ${req.url}`);
+    var originalUrl = req.originalUrl || req.url;
+    var prefix = config.public_route_prefix || '';
+    var cleanUrl = originalUrl;
+    if(prefix && originalUrl.startsWith(prefix)) {
+        cleanUrl = originalUrl.substring(prefix.length);
+    }
+    if(cleanUrl === '') cleanUrl = '/';
     var reqBody = "";
     req.on('data', function (data)
     {
@@ -213,14 +198,15 @@ function handleRequest(req, res, next)
             }
             try
             {
-                var comm = new communication(req, res, reqBody, authResult);
-                var sUrl = require('url').parse(req.url).pathname;
-                LSE_Logger.debug(`[Fennel-NG] Authenticated user: ${authResult.username}, processing: ${sUrl}`);
-                crossroads.parse(sUrl, [comm]);
+                var tempReq = Object.assign({}, req);
+                tempReq.url = cleanUrl;
+                var comm = new communication(tempReq, res, reqBody, authResult);
+                LSE_Logger.debug(`[Fennel-NG] Authenticated user: ${authResult.username}, processing: ${cleanUrl}`);
+                crossroads.parse(cleanUrl, [comm]);
             }
             catch(error)
             {
-                LSE_Logger.error(`[Fennel-NG] Request processing error: ${error.message}`);
+                LSE_Logger.error(`[Fennel-NG] Internal Request processing error: ${error.message}`);
                 res.writeHead(500);
                 res.end('Internal server error');
             }
@@ -281,25 +267,16 @@ function healthCheck()
         };
     });
 }
-function createExpressMiddleware()
-{
-    return function(req, res, next)
-    {
+function createExpressMiddleware() {
+    return function(req, res, next) {
         var originalUrl = req.originalUrl || req.url;
         var prefix = config.public_route_prefix || '';
-        var isFennelPath = originalUrl.startsWith('/p/') ||
-                           originalUrl.startsWith('/cal/') ||
-                           originalUrl.startsWith('/card/') ||
-                           originalUrl.startsWith('/.well-known/') ||
-                           originalUrl === '/' ||
-                           (prefix && originalUrl.startsWith(prefix));
-        if(isFennelPath)
-        {
+        var isFennelPath = prefix && originalUrl.startsWith(prefix);
+        if (isFennelPath) {
             LSE_Logger.debug(`[Fennel-NG] Handling CalDAV/CardDAV request: ${originalUrl}`);
             handleRequest(req, res, next);
-        }
-        else
-        {
+        } else {
+            LSE_Logger.debug(`[Fennel-NG] Skipping non-CalDAV/CardDAV request: ${originalUrl}`);
             next();
         }
     };
