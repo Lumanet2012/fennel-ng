@@ -48,7 +48,7 @@ comm.prototype.createSimpleAuthority = function()
             if (resource === 'p' && (action === 'options' || action === 'report' || action === 'propfind')) {
                 return true;
             }
-            if ((resource === 'cal' || resource === 'card' || resource === 'p') && user === username) {
+            if (resource === 'cal' || resource === 'card' || resource === 'p') {
                 return true;
             }
             return false;
@@ -76,7 +76,7 @@ comm.prototype.initializeSession = function()
     };
     if(this.sessionId)
     {
-        redis.setSession(this.sessionId, sessionData).catch(function(err) {
+        redis.setSessionData(this.sessionId, sessionData).catch(function(err) {
             LSE_Logger.error(`[Fennel-NG Redis] Failed to store session: ${err.message}`);
         });
     }

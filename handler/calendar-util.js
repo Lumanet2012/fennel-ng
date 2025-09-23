@@ -81,7 +81,7 @@ function returnOutbox(comm)
     var response = "";
     var username = comm.getUser().getUserName();
     response += "<d:response>";
-    response += "   <d:href>/cal/" + username + "/outbox/</d:href>";
+    response += "   <d:href>" + comm.getURL("/cal/") + username + "/outbox/</d:href>";
     response += "    <d:propstat>";
     response += "        <d:prop>";
     response += "            <d:current-user-privilege-set>";
@@ -136,7 +136,7 @@ function returnNotifications(comm)
     var response = "";
     var username = comm.getUser().getUserName();
     response += "<d:response>";
-    response += "<d:href>/cal/" + username + "/notifications/</d:href>";
+    response += "<d:href>" + comm.getURL("/cal/") + username + "/notifications/</d:href>";
     response += "<d:propstat>";
     response += "    <d:prop>";
     response += "        <d:current-user-privilege-set>";
@@ -172,7 +172,7 @@ function returnNotifications(comm)
     response += "            </d:privilege>";
     response += "       </d:current-user-privilege-set>";
     response += "       <d:owner>";
-    response += "           <d:href>/p/" + username + "/</d:href>";
+    response += "           <d:href>" + comm.getURL("/p/") + username + "/</d:href>";
     response += "       </d:owner>";
     response += "       <d:resourcetype>";
     response += "           <d:collection/>";

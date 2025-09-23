@@ -1,5 +1,5 @@
 const { XMLParser } = require('fast-xml-parser');
-const parser = new XMLParser({ 
+const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
     textNodeName: "#text",

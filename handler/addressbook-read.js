@@ -1,4 +1,15 @@
-// XML parsing temporarily disabled
+const { XMLParser } = require('fast-xml-parser');
+const parser = new XMLParser({ 
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    textNodeName: "#text",
+    parseAttributeValue: true
+});
+var xml = {
+    parseXml: function(body) {
+        return parser.parse(body);
+    }
+};
 var xh = require("../libs/xmlhelper");
 var redis = require('../libs/redis');
 var VCARDS = require('../libs/db').VCARDS;
@@ -20,8 +31,8 @@ function propfind(comm)
     var response = "";
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = handler/addressbook-read.js; // XML parsing disabled
-    var childs = []; // XML disabled
+    var node = xmlDoc.propfind;
+    var childs = node && node.prop ? Object.keys(node.prop) : [];
     var isRoot = true;
     if(comm.getUrlElementSize() > 4)
     {
@@ -120,8 +131,7 @@ function returnPropfindRootProps(comm, nodes)
     for (var i=0; i < len; ++i)
     {
         var child = nodes[i];
-        var name = child.name();
-        switch(name)
+        switch(child)
         {
             case 'add-member':
                 response += "";
@@ -145,7 +155,7 @@ function returnPropfindRootProps(comm, nodes)
                 response += "";
                 break;
             case 'owner':
-                response += "<d:owner><d:href>/p/" + username + "/</d:href></d:owner>";
+                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>";
                 break;
             case 'push-transports':
                 response += "";
@@ -177,7 +187,7 @@ function returnPropfindRootProps(comm, nodes)
             case 'getetag':
                 break;
             default:
-                if(name != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] CARD-PropFind Root not handled: ${name}`);
+                if(child != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] CARD-PropFind Root not handled: ${child}`);
                 break;
         }
     }
@@ -190,7 +200,7 @@ function returnPropfindRootProps(comm, nodes)
 function returnPropfindProps(comm, nodes, adb, rsVCARD)
 {
     var username = comm.getUser().getUserName();
-    var response = "<d:response><d:href>/card/" + username + "/" + adb.uri + "/</d:href>";
+    var response = "<d:response><d:href>" + comm.getFullURL("/card/" + username + "/" + adb.uri + "/") + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
     var responseEtag = "";
@@ -198,8 +208,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
     for (var i=0; i < len; ++i)
     {
         var child = nodes[i];
-        var name = child.name();
-        switch(name)
+        switch(child)
         {
             case 'add-member':
                 response += "";
@@ -223,7 +232,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += "";
                 break;
             case 'owner':
-                response += "<d:owner><d:href>/p/" + username + "/</d:href></d:owner>";
+                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>";
                 break;
             case 'push-transports':
                 response += "";
@@ -247,16 +256,16 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += getSupportedReportSet();
                 break;
             case 'sync-token':
-                response += "<d:sync-token>http://fennel-ng.lumanet.info/addressbook/sync/" + adb.synctoken + "</d:sync-token>";
+                response += "<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</d:sync-token>";
                 break;
             case 'getctag':
-                response += "<cs:getctag>http://fennel-ng.lumanet.info/addressbook/sync/" + adb.synctoken + "</cs:getctag>";
+                response += "<cs:getctag>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</cs:getctag>";
                 break;
             case 'getetag':
                 responseEtag += returnADBETag(comm, rsVCARD);
                 break;
             default:
-                if(name != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] CARD-PropFind not handled: ${name}`);
+                if(child != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] CARD-PropFind not handled: ${child}`);
                 break;
         }
     }
@@ -335,9 +344,9 @@ function report(comm)
     comm.appendResBody(xh.getXMLHead());
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var rootNode = xmlDoc.root();
-    var name = rootNode.name();
-    switch(name)
+    var rootKeys = Object.keys(xmlDoc);
+    var rootName = rootKeys[0];
+    switch(rootName)
     {
         case 'addressbook-multiget':
             handleReportAddressbookMultiget(comm);
@@ -346,7 +355,7 @@ function report(comm)
             handleReportSyncCollection(comm);
             break;
         default:
-            if(name != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] Report not handled: ${name}`);
+            if(rootName != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] Report not handled: ${rootName}`);
             comm.flushResponse();
             break;
     }
@@ -355,25 +364,29 @@ function handleReportAddressbookMultiget(comm)
 {
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = handler/addressbook-read.js; // XML parsing disabled
-    if(node != undefined)
+    var multigetNode = xmlDoc['addressbook-multiget'];
+    if(multigetNode != undefined)
     {
-        var childs = []; // XML disabled
+        var childs = multigetNode ? Object.keys(multigetNode) : [];
         var arrHrefs = [];
         var len = childs.length;
         for (var i=0; i < len; ++i)
         {
             var child = childs[i];
-            var name = child.name();
-            switch(name)
+            switch(child)
             {
                 case 'prop':
                     break;
                 case 'href':
-                    arrHrefs.push(parseHrefToVCARDId(child.text()));
+                    var hrefValue = multigetNode.href;
+                    if(Array.isArray(hrefValue)) {
+                        arrHrefs = arrHrefs.concat(hrefValue.map(parseHrefToVCARDId));
+                    } else {
+                        arrHrefs.push(parseHrefToVCARDId(hrefValue));
+                    }
                     break;
                 default:
-                    if(name != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] Multiget not handled: ${name}`);
+                    if(child != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] Multiget not handled: ${child}`);
                     break;
             }
         }
@@ -390,11 +403,11 @@ function handleReportSyncCollection(comm)
     var xmlDoc = xml.parseXml(body);
     var username = comm.getUser().getUserName();
     var addressbookUri = comm.getPathElement(3);
-    var node = handler/addressbook-read.js; // XML parsing disabled
+    var syncTokenNode = xmlDoc['sync-token'];
     var requestedSyncToken = 0;
     if(syncTokenNode)
     {
-        var tokenUrl = syncTokenNode.text();
+        var tokenUrl = syncTokenNode;
         var tokenMatch = tokenUrl.match(/\/(\d+)$/);
         if(tokenMatch)
         {
@@ -446,7 +459,7 @@ function handleReportSyncCollection(comm)
                 }
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
                 comm.appendResBody(response);
-                comm.appendResBody("<d:sync-token>http://fennel-ng.lumanet.info/addressbook/sync/" + currentSyncToken + "</d:sync-token>");
+                comm.appendResBody("<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + currentSyncToken) + "</d:sync-token>");
                 comm.appendResBody("</d:multistatus>");
                 comm.flushResponse();
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Sync collection completed: ${changes.length} changes`);
@@ -539,3 +552,4 @@ function getCurrentUserPrivilegeSet()
     response += "</d:current-user-privilege-set>";
     return response;
 }
+
