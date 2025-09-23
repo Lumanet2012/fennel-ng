@@ -51,17 +51,14 @@ function initializeFennelNG()
 }
 function setupRoutes() {
     var prefix = config.public_route_prefix || '';
-    LSE_Logger.debug(`[Fennel-NG] Registering route: ${prefix + '/cal/'}`);
     crossroads.addRoute(prefix + '/', onHitRoot);
     crossroads.addRoute(prefix + '/.well-known/{type}', onHitWellKnown);
     crossroads.addRoute(prefix + '/p/{params*}', onHitPrincipal);
     crossroads.addRoute(prefix + '/cal/', onHitCalendarRoot);
-    crossroads.addRoute(prefix + '/cal', onHitCalendarRoot);
+    
     crossroads.addRoute(prefix + '/cal/{username}/{params*}', onHitCalendar);
     crossroads.addRoute(prefix + '/card/', onHitAddressbookRoot);
-    crossroads.addRoute(prefix + '/card', onHitAddressbookRoot);
     crossroads.addRoute(prefix + '/card/{username}/{params*}', onHitAddressbook);
-    LSE_Logger.debug(`[Fennel-NG] onBypass: ${onBypass}`);
     crossroads.bypassed.add(onBypass);
 }
 function onBypass(comm, path)
@@ -80,7 +77,7 @@ function onHitRoot(comm)
 }
 function onHitWellKnown(comm, type)
 {
-    LSE_Logger.debug(`[Fennel-NG] Called .well-known URL for ${type}, redirecting to ${comm.getURL("/p/")}`);
+    LSE_Logger.debug(`[Fennel-NG] Called .well-known URL for ${type}, redirecting to /p/`);
     let location = type === 'caldav' ? '/cal/' : (type === 'carddav' ? '/card/' : '/p/');
     comm.getRes().writeHead(302, { 'Location': comm.getFullURL(location) });
 }
@@ -212,7 +209,7 @@ function handleRequest(req, res, next)
 		};
                 var comm = new communication(tempReq, res, reqBody, authResult);
                 LSE_Logger.debug(`[Fennel-NG] Authenticated user: ${authResult.username}, processing: ${cleanUrl}`);
-                crossroads.parse(originalUrl, [comm]);
+                crossroads.parse(cleanUrl, [comm]);
             }
             catch(error)
             {

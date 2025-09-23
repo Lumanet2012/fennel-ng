@@ -1,4 +1,15 @@
-// XML parsing temporarily disabled
+const { XMLParser } = require('fast-xml-parser');
+const parser = new XMLParser({ 
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    textNodeName: "#text",
+    parseAttributeValue: true
+});
+var xml = {
+    parseXml: function(body) {
+        return parser.parse(body);
+    }
+};
 var xh = require("../libs/xmlhelper");
 var principalUtil = require('./principal-util');
 module.exports = {
@@ -14,15 +25,14 @@ function propfind(comm)
     comm.appendResBody(xh.getXMLHead());
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = handler/principal-read.js; // XML parsing disabled
-    var childs = []; // XML disabled
+    var node = xmlDoc.propfind;
+    var childs = node && node.prop ? Object.keys(node.prop) : [];
     var response = "";
     var len = childs.length;
     for (var i=0; i < len; ++i)
     {
         var child = childs[i];
-        var name = child.name();
-        switch(name)
+        switch(child)
         {
             case 'checksum-versions':
                 response += "";
@@ -73,7 +83,7 @@ function propfind(comm)
                 response += "";
                 break;
             default:
-                if(name != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-PF: not handled: ${name}`);
+                if(child != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-PF: not handled: ${child}`);
                 break;
         }
     }
@@ -105,38 +115,38 @@ function report(comm)
     comm.setResponseCode(200);
     comm.appendResBody(xh.getXMLHead());
     var xmlDoc = xml.parseXml(body);
-    var node = handler/principal-read.js; // XML parsing disabled
+    var rootKeys = Object.keys(xmlDoc);
+    var rootName = rootKeys[0];
     var response = "";
-    if(node != undefined)
+    if(rootName !== undefined)
     {
-        var childs = []; // XML disabled
+        var node = xmlDoc[rootName];
+        var childs = node ? Object.keys(node) : [];
         var len = childs.length;
         for (var i=0; i < len; ++i)
         {
             var child = childs[i];
-            var name = child.name();
-            switch(name)
+            switch(child)
             {
                 case 'principal-search-property-set':
                     response += principalUtil.getPrincipalSearchPropertySet(comm);
                     break;
                 default:
-                    if(name != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
+                    if(child != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-R: not handled: ${child}`);
                     break;
             }
         }
     }
-    var node = handler/principal-read.js; // XML parsing disabled
-    if(node != undefined)
+    var rootElement = xmlDoc[rootKeys[0]];
+    if(rootElement !== undefined)
     {
-        var name = node.name();
-        switch(name)
+        switch(rootKeys[0])
         {
             case 'principal-search-property-set':
                 response += principalUtil.getPrincipalSearchPropertySet(comm);
                 break;
             default:
-                if(name != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-R: not handled: ${name}`);
+                if(rootKeys[0] != 'text') LSE_Logger.warn(`[Fennel-NG Principal] P-R: not handled: ${rootKeys[0]}`);
                 break;
         }
     }
@@ -147,3 +157,4 @@ function report(comm)
     }
     comm.flushResponse();
 }
+
