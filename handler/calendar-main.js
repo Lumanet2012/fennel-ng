@@ -16,7 +16,7 @@ var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
 var CALENDARS = require('../libs/db').CALENDARS;
 var calendarUtil = require('./calendar-util');
 var calendarRead = require('./calendar-read');
-var calendarPut = require('./calendar-put');
+var calendarWrite = require('./calendar-write');
 var calendarDel = require('./calendar-del');
 var calendarMove = require('./calendar-move');
 function handleRoot(comm)
@@ -66,7 +66,7 @@ function handleCalendar(comm)
             calendarRead.report(comm);
             break;
         case 'PUT':
-            calendarPut.put(comm);
+            calendarWrite.put(comm);
             break;
         case 'GET':
             calendarRead.gett(comm);
