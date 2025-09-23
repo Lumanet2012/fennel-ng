@@ -106,7 +106,7 @@ function handlePropfindForUser(comm)
     LSE_Logger.debug(`[Fennel-NG CalDAV] Requested props: ${JSON.stringify(requestedProps)}`);
     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:A=\"http://apple.com/ns/ical/\">");
     comm.appendResBody("<d:response>");
-    comm.appendResBody("<d:href>" + comm.getFullURL("/cal/" + username + "/") + "</d:href>");
+    comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>");
     comm.appendResBody("<d:propstat>");
     comm.appendResBody("<d:prop>");
     for (var i = 0; i < requestedProps.length; i++) {
@@ -200,24 +200,8 @@ function handlePropfindForUser(comm)
             comm.appendResBody("</d:propstat>");
             comm.appendResBody("</d:response>");
         }
-        comm.appendResBody("<d:response>");
-        comm.appendResBody("<d:href>" + comm.getFullURL("/cal/" + username + "/outbox/") + "</d:href>");
-        comm.appendResBody("<d:propstat>");
-        comm.appendResBody("<d:prop>");
-        comm.appendResBody("<d:resourcetype><d:collection/><cal:schedule-outbox/></d:resourcetype>");
-        comm.appendResBody("</d:prop>");
-        comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>");
-        comm.appendResBody("</d:propstat>");
-        comm.appendResBody("</d:response>");
-        comm.appendResBody("<d:response>");
-        comm.appendResBody("<d:href>" + comm.getFullURL("/cal/" + username + "/notifications/") + "</d:href>");
-        comm.appendResBody("<d:propstat>");
-        comm.appendResBody("<d:prop>");
-        comm.appendResBody("<d:resourcetype><d:collection/><cs:notification/></d:resourcetype>");
-        comm.appendResBody("</d:prop>");
-        comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>");
-        comm.appendResBody("</d:propstat>");
-        comm.appendResBody("</d:response>");
+        comm.appendResBody(calendarUtil.returnOutbox(comm));
+        comm.appendResBody(calendarUtil.returnNotifications(comm));
         comm.appendResBody("</d:multistatus>");
         comm.flushResponse();
         LSE_Logger.debug(`[Fennel-NG CalDAV] handlePropfindForUser completed successfully`);
@@ -227,7 +211,7 @@ function handlePropfindForUser(comm)
         comm.setResponseCode(500);
         comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\">");
         comm.appendResBody("<d:response>");
-        comm.appendResBody("<d:href>" + comm.getFullURL("/cal/" + username + "/") + "</d:href>");
+        comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>");
         comm.appendResBody("<d:propstat>");
         comm.appendResBody("<d:status>HTTP/1.1 500 Internal Server Error</d:status>");
         comm.appendResBody("</d:propstat>");
@@ -320,3 +304,4 @@ module.exports = {
     handleRoot: handleRoot,
     handleCalendar: handleCalendar
 };
+
