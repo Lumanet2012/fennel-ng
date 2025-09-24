@@ -73,16 +73,16 @@ function isReportPropertyCalendarProxyWriteFor(comm)
 function replyPropertyCalendarProxyWriteFor(comm)
 {
     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"" + comm.getFullURL("/ns/") + " xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-    comm.appendResBody("<d:response>");
-    comm.appendResBody("    <d:href>" + comm.getURL() + "</d:href>");
-    comm.appendResBody("    <d:propstat>");
-    comm.appendResBody("       <d:prop>");
-    comm.appendResBody("           <cs:calendar-proxy-read-for/>");
-    comm.appendResBody("           <cs:calendar-proxy-write-for/>");
-    comm.appendResBody("       </d:prop>");
-    comm.appendResBody("        <d:status>HTTP/1.1 200 OK</d:status>");
-    comm.appendResBody("    </d:propstat>");
-    comm.appendResBody("</d:response>");
+    comm.appendResBody("<d:response>\r\n");
+    comm.appendResBody("    <d:href>" + comm.getURL() + "</d:href>\r\n");
+    comm.appendResBody("    <d:propstat>\r\n");
+    comm.appendResBody("       <d:prop>\r\n");
+    comm.appendResBody("           <cs:calendar-proxy-read-for/>\r\n");
+    comm.appendResBody("           <cs:calendar-proxy-write-for/>\r\n");
+    comm.appendResBody("       </d:prop>\r\n");
+    comm.appendResBody("        <d:status>HTTP/1.1 200 OK</d:status>\r\n");
+    comm.appendResBody("    </d:propstat>\r\n");
+    comm.appendResBody("</d:response>\r\n");
     comm.appendResBody("</d:multistatus>\r\n");
 }
 module.exports = {

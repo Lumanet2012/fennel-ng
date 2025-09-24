@@ -68,9 +68,9 @@ function put(comm)
                 comm.setHeader("ETag", `"${existingVCard.etag}"`);
                 comm.setResponseCode(412);
                 comm.appendResBody(xh.getXMLHead());
-                comm.appendResBody("<d:error xmlns:d=\"DAV:\">");
-                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>");
-                comm.appendResBody("</d:error>");
+                comm.appendResBody("<d:error xmlns:d=\"DAV:\">\r\n");
+                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>\r\n");
+                comm.appendResBody("</d:error>\r\n");
                 comm.flushResponse();
                 return;
             }
@@ -146,19 +146,19 @@ function proppatch(comm)
             if(!adb)
             {
                 LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found for proppatch: ${addressbookUri}`);
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
-                comm.appendResBody("<d:response>");
+                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
+                comm.appendResBody("<d:response>\r\n");
                 comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>");
-                comm.appendResBody("<d:propstat>");
-                comm.appendResBody("<d:prop>");
+                comm.appendResBody("<d:propstat>\r\n");
+                comm.appendResBody("<d:prop>\r\n");
                 if(props.displayname) response += "<d:displayname/>";
                 if(props.description) response += "<card:description/>";
                 comm.appendResBody(response);
-                comm.appendResBody("</d:prop>");
-                comm.appendResBody("<d:status>HTTP/1.1 403 Forbidden</d:status>");
-                comm.appendResBody("</d:propstat>");
-                comm.appendResBody("</d:response>");
-                comm.appendResBody("</d:multistatus>");
+                comm.appendResBody("</d:prop>\r\n");
+                comm.appendResBody("<d:status>HTTP/1.1 403 Forbidden</d:status>\r\n");
+                comm.appendResBody("</d:propstat>\r\n");
+                comm.appendResBody("</d:response>\r\n");
+                comm.appendResBody("</d:multistatus>\r\n");
                 comm.flushResponse();
                 return;
             }
@@ -188,17 +188,17 @@ function proppatch(comm)
                 return Promise.resolve();
             }).then(function()
             {
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
-                comm.appendResBody("<d:response>");
-                comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>");
-                comm.appendResBody("<d:propstat>");
-                comm.appendResBody("<d:prop>");
+                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
+                comm.appendResBody("<d:response>\r\n");
+                comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>\r\n");
+                comm.appendResBody("<d:propstat>\r\n");
+                comm.appendResBody("<d:prop>\r\n");
                 comm.appendResBody(response);
-                comm.appendResBody("</d:prop>");
-                comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>");
-                comm.appendResBody("</d:propstat>");
-                comm.appendResBody("</d:response>");
-                comm.appendResBody("</d:multistatus>");
+                comm.appendResBody("</d:prop>\r\n");
+                comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>\r\n");
+                comm.appendResBody("</d:propstat>\r\n");
+                comm.appendResBody("</d:response>\r\n");
+                comm.appendResBody("</d:multistatus>\r\n");
                 comm.flushResponse();
             });
         }).catch(function(error)

@@ -89,14 +89,14 @@ function propfind(comm)
     }
     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
     comm.appendResBody("<d:response><d:href>" + comm.getFullURL(comm.getURL()) + "</d:href>");
-    comm.appendResBody("<d:propstat>");
-    comm.appendResBody("<d:prop>");
+    comm.appendResBody("<d:propstat>\r\n");
+    comm.appendResBody("<d:prop>\r\n");
     comm.appendResBody(response);
-    comm.appendResBody("</d:prop>");
-    comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>");
-    comm.appendResBody("</d:propstat>");
-    comm.appendResBody("</d:response>");
-    comm.appendResBody("</d:multistatus>");
+    comm.appendResBody("</d:prop>\r\n");
+    comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>\r\n");
+    comm.appendResBody("</d:propstat>\r\n");
+    comm.appendResBody("</d:response>\r\n");
+    comm.appendResBody("</d:multistatus>\r\n");
     comm.flushResponse();
 }
 function report(comm)
@@ -108,7 +108,7 @@ function report(comm)
     {
         LSE_Logger.warn(`[Fennel-NG Principal] principal.report called with no body`);
         comm.setResponseCode(500);
-        comm.appendResBody("Internal Server Error");
+        comm.appendResBody("Internal Server Error\r\n");
         comm.flushResponse();
         return;
     }

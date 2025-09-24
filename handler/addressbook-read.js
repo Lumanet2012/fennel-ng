@@ -72,9 +72,9 @@ function propfind(comm)
                 return Promise.resolve();
             }).then(function()
             {
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
+                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
                 comm.appendResBody(response);
-                comm.appendResBody("</d:multistatus>");
+                comm.appendResBody("</d:multistatus>\r\n");
                 comm.flushResponse();
             }).catch(function(error)
             {
@@ -107,9 +107,9 @@ function propfind(comm)
             }).then(function(rsVCARDS)
             {
                 response += returnPropfindProps(comm, childs, adb, rsVCARDS);
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
+                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
                 comm.appendResBody(response);
-                comm.appendResBody("</d:multistatus>");
+                comm.appendResBody("</d:multistatus>\r\n");
                 comm.flushResponse();
             });
         }).catch(function(error)
@@ -143,7 +143,7 @@ function returnPropfindRootProps(comm, nodes)
                 response += getCurrentUserPrivilegeSet();
                 break;
             case 'displayname':
-                response += "<d:displayname>Contacts</d:displayname>";
+                response += "<d:displayname>Contacts</d:displayname>\r\n";
                 break;
             case 'max-image-size':
                 response += "";
@@ -155,7 +155,7 @@ function returnPropfindRootProps(comm, nodes)
                 response += "";
                 break;
             case 'owner':
-                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>";
+                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>\r\n";
                 break;
             case 'push-transports':
                 response += "";
@@ -173,7 +173,7 @@ function returnPropfindRootProps(comm, nodes)
                 response += "";
                 break;
             case 'resourcetype':
-                response += "<d:resourcetype><d:collection/></d:resourcetype>";
+                response += "<d:resourcetype><d:collection/></d:resourcetype>\r\n";
                 break;
             case 'supported-report-set':
                 response += getSupportedReportSet();
@@ -191,10 +191,10 @@ function returnPropfindRootProps(comm, nodes)
                 break;
         }
     }
-    response += "</d:prop>";
-    response += "<d:status>HTTP/1.1 200 OK</d:status>";
-    response += "</d:propstat>";
-    response += "</d:response>";
+    response += "</d:prop>\r\n";
+    response += "<d:status>HTTP/1.1 200 OK</d:status>\r\n";
+    response += "</d:propstat>\r\n";
+    response += "</d:response>\r\n";
     return response;
 }
 function returnPropfindProps(comm, nodes, adb, rsVCARD)
@@ -220,7 +220,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += getCurrentUserPrivilegeSet();
                 break;
             case 'displayname':
-                response += "<d:displayname>" + adb.displayname + "</d:displayname>";
+                response += "<d:displayname>" + adb.displayname + "</d:displayname>\r\n";
                 break;
             case 'max-image-size':
                 response += "";
@@ -232,7 +232,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += "";
                 break;
             case 'owner':
-                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>";
+                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>\r\n";
                 break;
             case 'push-transports':
                 response += "";
@@ -250,16 +250,16 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += "";
                 break;
             case 'resourcetype':
-                response += "<d:resourcetype><d:collection/><card:addressbook/></d:resourcetype>";
+                response += "<d:resourcetype><d:collection/><card:addressbook/></d:resourcetype>\r\n";
                 break;
             case 'supported-report-set':
                 response += getSupportedReportSet();
                 break;
             case 'sync-token':
-                response += "<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</d:sync-token>";
+                response += "<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</d:sync-token>\r\n";
                 break;
             case 'getctag':
-                response += "<cs:getctag>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</cs:getctag>";
+                response += "<cs:getctag>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</cs:getctag>\r\n";
                 break;
             case 'getetag':
                 responseEtag += returnADBETag(comm, rsVCARD);
@@ -269,10 +269,10 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 break;
         }
     }
-    response += "</d:prop>";
-    response += "<d:status>HTTP/1.1 200 OK</d:status>";
-    response += "</d:propstat>";
-    response += "</d:response>";
+    response += "</d:prop>\r\n";
+    response += "<d:status>HTTP/1.1 200 OK</d:status>\r\n";
+    response += "</d:propstat>\r\n";
+    response += "</d:response>\r\n";
     if(responseEtag.length > 0)
     {
         response += responseEtag;
@@ -286,15 +286,15 @@ function returnADBETag(comm, rsVCARD)
     {
         var vcard = rsVCARD.rows[j];
         var date = Date.parse(vcard.lastmodified || vcard.updatedAt);
-        response += "<d:response>";
-        response += "<d:href>" + comm.getURL() + vcard.uri + "</d:href>";
-        response += "<d:propstat>";
-        response += "<d:prop>";
-        response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>";
-        response += "</d:prop>";
-        response += "<d:status>HTTP/1.1 200 OK</d:status>";
-        response += "</d:propstat>";
-        response += "</d:response>";
+        response += "<d:response>\r\n";
+        response += "<d:href>" + comm.getURL() + vcard.uri + "</d:href>\r\n";
+        response += "<d:propstat>\r\n";
+        response += "<d:prop>\r\n";
+        response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>\r\n";
+        response += "</d:prop>\r\n";
+        response += "<d:status>HTTP/1.1 200 OK</d:status>\r\n";
+        response += "</d:propstat>\r\n";
+        response += "</d:response>\r\n";
     }
     return response;
 }
@@ -445,22 +445,22 @@ function handleReportSyncCollection(comm)
                 for(var i = 0; i < changes.length; i++)
                 {
                     var change = changes[i];
-                    response += "<d:response>";
-                    response += "<d:href>" + comm.getURL() + change.uri + "</d:href>";
+                    response += "<d:response>\r\n";
+                    response += "<d:href>" + comm.getURL() + change.uri + "</d:href>\r\n";
                     if(change.operation === 1)
                     {
-                        response += "<d:status>HTTP/1.1 200 OK</d:status>";
+                        response += "<d:status>HTTP/1.1 200 OK</d:status>\r\n";
                     }
                     else if(change.operation === 3)
                     {
-                        response += "<d:status>HTTP/1.1 404 Not Found</d:status>";
+                        response += "<d:status>HTTP/1.1 404 Not Found</d:status>\r\n";
                     }
-                    response += "</d:response>";
+                    response += "</d:response>\r\n";
                 }
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
+                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
                 comm.appendResBody(response);
-                comm.appendResBody("<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + currentSyncToken) + "</d:sync-token>");
-                comm.appendResBody("</d:multistatus>");
+                comm.appendResBody("<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + currentSyncToken) + "</d:sync-token>\r\n");
+                comm.appendResBody("</d:multistatus>\r\n");
                 comm.flushResponse();
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Sync collection completed: ${changes.length} changes`);
             });
@@ -503,17 +503,17 @@ function handleReportHrefs(comm, arrVCARDIds)
             var content = vcard.carddata || vcard.content;
             content = content.replace(/&/g,'&amp;');
             content = content.replace(/\r\n|\r|\n/g,'&#13;\r\n');
-            response += "<d:response>";
-            response += "<d:href>" + comm.getURL() + vcard.uri + "</d:href>";
-            response += "<d:propstat><d:prop>";
-            response += "<card:address-data>" + content + "</card:address-data>";
-            response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>";
-            response += "</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>";
-            response += "</d:response>";
+            response += "<d:response>\r\n";
+            response += "<d:href>" + comm.getURL() + vcard.uri + "</d:href>\r\n";
+            response += "<d:propstat><d:prop>\r\n";
+            response += "<card:address-data>" + content + "</card:address-data>\r\n";
+            response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>\r\n";
+            response += "</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>\r\n";
+            response += "</d:response>\r\n";
         }
-        comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">");
+        comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
         comm.appendResBody(response);
-        comm.appendResBody("</d:multistatus>");
+        comm.appendResBody("</d:multistatus>\r\n");
         comm.flushResponse();
         LSE_Logger.debug(`[Fennel-NG CardDAV] Multiget completed: ${vcards.length} vcards`);
     }).catch(function(error)
@@ -526,30 +526,30 @@ function handleReportHrefs(comm, arrVCARDIds)
 function getSupportedReportSet()
 {
     var response = "";
-    response += "<d:supported-report-set>";
-    response += "<d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>";
-    response += "<d:supported-report><d:report><d:expand-property/></d:report></d:supported-report>";
-    response += "<d:supported-report><d:report><d:principal-property-search/></d:report></d:supported-report>";
-    response += "<d:supported-report><d:report><d:principal-search-property-set/></d:report></d:supported-report>";
+    response += "<d:supported-report-set>\r\n";
+    response += "<d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>\r\n";
+    response += "<d:supported-report><d:report><d:expand-property/></d:report></d:supported-report>\r\n";
+    response += "<d:supported-report><d:report><d:principal-property-search/></d:report></d:supported-report>\r\n";
+    response += "<d:supported-report><d:report><d:principal-search-property-set/></d:report></d:supported-report>\r\n";
     response += "</d:supported-report-set>";
     return response;
 }
 function getCurrentUserPrivilegeSet()
 {
     var response = "";
-    response += "<d:current-user-privilege-set>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><cal:read-free-busy/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-acl/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-content/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-properties/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:bind/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:unbind/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:unlock/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-acl/></d:privilege>";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-current-user-privilege-set/></d:privilege>";
-    response += "</d:current-user-privilege-set>";
+    response += "<d:current-user-privilege-set>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><cal:read-free-busy/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-acl/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-content/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-properties/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:bind/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:unbind/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:unlock/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:read/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-acl/></d:privilege>\r\n";
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-current-user-privilege-set/></d:privilege>\r\n";
+    response += "</d:current-user-privilege-set>\r\n";
     return response;
 }
 

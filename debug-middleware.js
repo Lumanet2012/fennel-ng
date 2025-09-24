@@ -58,7 +58,7 @@ function createDebugMiddleware() {
             } else if (event === 'end') {
                 const wrappedHandler = function() {
                     LSE_Logger.info(`[FENNEL-NG RAW] END EVENT: Total body length: ${rawBody.length}`);
-                    logLargeContent(`[FENNEL-NG RAW] COMPLETE REQUEST BODY [${requestId}]`, rawBody);
+                    logLargeContent(`[FENNEL-NG RAW] [${requestId}]`, rawBody);
                     return handler.call(this);
                 };
                 return originalOn.call(this, event, wrappedHandler);
@@ -76,7 +76,7 @@ function createDebugMiddleware() {
                 const chunkStr = chunk.toString();
                 responseBody += chunkStr;
                 LSE_Logger.info(`[FENNEL-NG RAW] RESPONSE WRITE: ${chunkStr.length} bytes`);
-                logLargeContent(`[FENNEL-NG RAW] RESPONSE CHUNK [${requestId}]`, chunkStr);
+                logLargeContent(`[FENNEL-NG RAW] [${requestId}]`, chunkStr);
             }
             return originalWrite.call(this, chunk, encoding, callback);
         };
@@ -85,7 +85,7 @@ function createDebugMiddleware() {
                 const chunkStr = chunk.toString();
                 responseBody += chunkStr;
                 LSE_Logger.info(`[FENNEL-NG RAW] RESPONSE END: ${chunkStr.length} bytes`);
-                logLargeContent(`[FENNEL-NG RAW] RESPONSE END CHUNK [${requestId}]`, chunkStr);
+                logLargeContent(`[FENNEL-NG RAW] [${requestId}]`, chunkStr);
             }
             const endTime = Date.now();
             LSE_Logger.info(`[FENNEL-NG RAW] ========== OUTGOING RESPONSE ${new Date().toISOString()} [${requestId}] ==========`);
@@ -93,7 +93,7 @@ function createDebugMiddleware() {
             LSE_Logger.info(`[FENNEL-NG RAW] Status Message: ${res.statusMessage || 'OK'}`);
             logLargeContent(`[FENNEL-NG RAW] Response Headers [${requestId}]`, JSON.stringify(res.getHeaders(), null, 2));
             LSE_Logger.info(`[FENNEL-NG RAW] Response Body Length: ${responseBody.length}`);
-            logLargeContent(`[FENNEL-NG RAW] COMPLETE RESPONSE BODY [${requestId}]`, responseBody);
+            logLargeContent(`[FENNEL-NG RAW] [${requestId}]`, responseBody);
             LSE_Logger.info(`[FENNEL-NG RAW] Request Duration: ${endTime - startTime}ms`);
             LSE_Logger.info(`[FENNEL-NG RAW] ======================================= [${requestId}]`);
             return originalEnd.call(this, chunk, encoding, callback);
