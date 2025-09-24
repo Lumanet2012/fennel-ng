@@ -183,29 +183,32 @@ comm.prototype.getPrincipalURL = function(username)
 {
     if(!username) {
         username = this.getUser().getUserName();
+        caldav_username = ldapUsername.replace(/@/g, '-'); 
     }
-    return this.getFullURL(`/p/${username}/`);
+    return this.getFullURL(`/p/${caldav_username}/`);
 };
 comm.prototype.getCalendarURL = function(username, calendarUri)
 {
     if(!username) {
         username = this.getUser().getUserName();
+        caldav_username = ldapUsername.replace(/@/g, '-');
     }
     if(calendarUri) {
-        return this.getFullURL(`/cal/${username}/${calendarUri}/`);
+        return this.getFullURL(`/cal/${caldav_username}/${calendarUri}/`);
     } else {
-        return this.getFullURL(`/cal/${username}/`);
+        return this.getFullURL(`/cal/${caldav_username}/`);
     }
 };
 comm.prototype.getCardURL = function(username, addressbookUri)
 {
     if(!username) {
         username = this.getUser().getUserName();
+        caldav_username = ldapUsername.replace(/@/g, '-');
     }
     if(addressbookUri) {
-        return this.getFullURL(`/card/${username}/${addressbookUri}/`);
+        return this.getFullURL(`/card/${caldav_username}/${addressbookUri}/`);
     } else {
-        return this.getFullURL(`/card/${username}/`);
+        return this.getFullURL(`/card/${caldav_username}/`);
     }
 };
 comm.prototype.getURLAsArray = function()
