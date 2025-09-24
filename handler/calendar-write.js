@@ -34,9 +34,9 @@ function put(comm)
                 comm.setHeader("ETag", `"${existingCalendarObject.etag}"`);
                 comm.setResponseCode(412);
                 comm.appendResBody(xh.getXMLHead());
-                comm.appendResBody("<d:error xmlns:d=\"DAV:\">");
-                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>");
-                comm.appendResBody("</d:error>");
+                comm.appendResBody("<d:error xmlns:d=\"DAV:\">\r\n");
+                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>\r\n");
+                comm.appendResBody("</d:error>\r\n");
                 comm.flushResponse();
                 return;
             }
@@ -45,9 +45,9 @@ function put(comm)
                 comm.setStandardHeaders();
                 comm.setResponseCode(412);
                 comm.appendResBody(xh.getXMLHead());
-                comm.appendResBody("<d:error xmlns:d=\"DAV:\">");
-                comm.appendResBody("<d:precondition-failed>If-Match header specified, but ETag didn't match</d:precondition-failed>");
-                comm.appendResBody("</d:error>");
+                comm.appendResBody("<d:error xmlns:d=\"DAV:\"n");
+                comm.appendResBody("<d:precondition-failed>If-Match header specified, but ETag didn't match</d:precondition-failed>\r\n");
+                comm.appendResBody("</d:error>\r\n");
                 comm.flushResponse();
                 return;
             }

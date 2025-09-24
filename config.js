@@ -80,6 +80,7 @@ var config =
         'p:options,report,propfind',
         'p:$username:*'
     ],
+    xml_lineend: '\r\n',
     test_user_name: 'demo',
     test_user_pwd: 'demo'
 };
