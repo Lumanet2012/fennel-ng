@@ -36,10 +36,12 @@ async function checkLDAP(username, password, callback)
     LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with LDAP method: ${username}`);
     try
     {
-        var cachedUser = await redis.getLDAPUser(username);
+        var ldapUsername = username.replace(/-/g, '@');
+        LSE_Logger.debug(`[Fennel-NG Auth] Converted username for LDAP: ${ldapUsername}`);
+        var cachedUser = await redis.getLDAPUser(ldapUsername);
         if(cachedUser)
         {
-            LSE_Logger.debug(`[Fennel-NG Auth] Using cached LDAP data for: ${username}`);
+            LSE_Logger.debug(`[Fennel-NG Auth] Using cached LDAP data for: ${ldapUsername}`);
             var Argon2Auth = require('./argon2-auth');
             var passwordValid = await Argon2Auth.verifyPassword(password, cachedUser.passwordHash);
             if(passwordValid)
@@ -49,7 +51,7 @@ async function checkLDAP(username, password, callback)
                 );
                 if(hasRequiredGroup)
                 {
-                    LSE_Logger.info(`[Fennel-NG Auth] User authenticated from cache: ${username}`);
+                    LSE_Logger.info(`[Fennel-NG Auth] User authenticated from cache: ${ldapUsername}`);
                     callback({
                         success: true,
                         method: 'ldap',
@@ -65,12 +67,12 @@ async function checkLDAP(username, password, callback)
                 }
                 else
                 {
-                    LSE_Logger.warn(`[Fennel-NG Auth] Cached user ${username} not in required group: ${config.auth_method_ldap_required_group}`);
+                    LSE_Logger.warn(`[Fennel-NG Auth] Cached user ${ldapUsername} not in required group: ${config.auth_method_ldap_required_group}`);
                 }
             }
         }
         var ldapClient = new LDAPIntegration(config);
-        var authResult = await ldapClient.authenticateUser(username, password);
+        var authResult = await ldapClient.authenticateUser(ldapUsername, password);
         if(authResult.success)
         {
             var hasRequiredGroup = authResult.groups.some(group =>
@@ -83,14 +85,14 @@ async function checkLDAP(username, password, callback)
                     var Argon2Auth = require('./argon2-auth');
                     var passwordHash = await Argon2Auth.hashPassword(password);
                     var userData = {
-                        username: username,
+                        username: ldapUsername,
                         passwordHash: passwordHash,
                         groups: authResult.groups,
                         lastAuthenticated: Math.floor(Date.now() / 1000)
                     };
-                    await redis.cacheLDAPUser(username, userData, 300);
+                    await redis.cacheLDAPUser(ldapUsername, userData, 300);
                 }
-                LSE_Logger.info(`[Fennel-NG Auth] User authenticated via LDAP: ${username}`);
+                LSE_Logger.info(`[Fennel-NG Auth] User authenticated via LDAP: ${ldapUsername}`);
                 callback({
                     success: true,
                     method: 'ldap',
@@ -106,12 +108,12 @@ async function checkLDAP(username, password, callback)
             }
             else
             {
-                LSE_Logger.warn(`[Fennel-NG Auth] User ${username} not in required group: ${config.auth_method_ldap_required_group}`);
+                LSE_Logger.warn(`[Fennel-NG Auth] User ${ldapUsername} not in required group: ${config.auth_method_ldap_required_group}`);
             }
         }
         else
         {
-            LSE_Logger.warn(`[Fennel-NG Auth] LDAP authentication failed for ${username}: ${authResult.error}`);
+            LSE_Logger.warn(`[Fennel-NG Auth] LDAP authentication failed for ${ldapUsername}: ${authResult.error}`);
         }
         callback(false);
     }

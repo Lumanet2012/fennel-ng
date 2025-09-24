@@ -10,6 +10,7 @@ var xml = {
         return parser.parse(body);
     }
 };
+var config = require('../config').config;
 var xh = require("../libs/xmlhelper");
 var redis = require('../libs/redis');
 var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
@@ -98,51 +99,76 @@ function handlePropfindForUser(comm)
     comm.appendResBody(xh.getXMLHead());
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var node = xmlDoc.propfind;
-    var requestedProps = node && node.prop ? Object.keys(node.prop) : [];
+    var node = xmlDoc.propfind || xmlDoc['D:propfind'];
+    var propNode = node && (node.prop || node['D:prop']);
+    var requestedProps = propNode ? Object.keys(propNode) : [];
     var username = comm.getUser().getUserName();
+    var config = require('../config').config;
     LSE_Logger.debug(`[Fennel-NG CalDAV] Calendar root discovery for user: ${username}`);
     LSE_Logger.debug(`[Fennel-NG CalDAV] Requested props: ${JSON.stringify(requestedProps)}`);
-    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:A=\"http://apple.com/ns/ical/\"\r\n>");
-    comm.appendResBody("<d:response>\r\n");
-    comm.appendResBody("<d:href>" + comm.getFullURL("/cal/") + "</d:href>\r\n");
-    comm.appendResBody("<d:propstat>\r\n");
-    comm.appendResBody("<d:prop>\r\n");
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Raw XML body: ${body}`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Parsed XML: ${JSON.stringify(xmlDoc)}`);
+    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:A=\"http://apple.com/ns/ical/\">" + config.xml_lineend);
+    comm.appendResBody("<d:response>" + config.xml_lineend);
+    comm.appendResBody("<d:href>" + comm.getFullURL("/cal/") + "</d:href>" + config.xml_lineend);
+    comm.appendResBody("<d:propstat>" + config.xml_lineend);
+    comm.appendResBody("<d:prop>" + config.xml_lineend);
     for (var i = 0; i < requestedProps.length; i++) {
         var prop = requestedProps[i];
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Processing property: ${prop}`);
         switch(prop) {
             case 'resourcetype':
-                comm.appendResBody("<d:resourcetype><d:collection/></d:resourcetype>\r\n");
+            case 'D:resourcetype':
+                comm.appendResBody("<d:resourcetype><d:collection/></d:resourcetype>" + config.xml_lineend);
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Added resourcetype property`);
                 break;
             case 'displayname':
-                comm.appendResBody("<d:displayname>Calendar Home</d:displayname>\r\n");
+            case 'D:displayname':
+                comm.appendResBody("<d:displayname>Calendar Home</d:displayname>" + config.xml_lineend);
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Added displayname property`);
                 break;
             case 'current-user-principal':
-                comm.appendResBody("<d:current-user-principal><d:href>" + comm.getFullURL("/p/" + encodeURIComponent(username) + "/") + "</d:href></d:current-user-principal>\r\n");
+            case 'D:current-user-principal':
+                comm.appendResBody("<d:current-user-principal><d:href>" + comm.getFullURL("/p/" + encodeURIComponent(username) + "/") + "</d:href></d:current-user-principal>" + config.xml_lineend);
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Added current-user-principal property`);
                 break;
             case 'calendar-home-set':
             case 'C:calendar-home-set':
-                comm.appendResBody("<cal:calendar-home-set><d:href>" + comm.getFullURL("/cal/" + encodeURIComponent(username) + "/") + "</d:href></cal:calendar-home-set>\r\n");
+                comm.appendResBody("<cal:calendar-home-set><d:href>" + comm.getFullURL("/cal/" + encodeURIComponent(username) + "/") + "</d:href></cal:calendar-home-set>" + config.xml_lineend);
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Added calendar-home-set property`);
                 break;
             case 'owner':
-                comm.appendResBody("<d:owner><d:href>" + comm.getFullURL("/p/" + encodeURIComponent(username) + "/") + "</d:href></d:owner>\r\n");
+            case 'D:owner':
+                comm.appendResBody("<d:owner><d:href>" + comm.getFullURL("/p/" + encodeURIComponent(username) + "/") + "</d:href></d:owner>" + config.xml_lineend);
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Added owner property`);
                 break;
             case 'current-user-privilege-set':
+            case 'D:current-user-privilege-set':
                 comm.appendResBody(calendarUtil.getCurrentUserPrivilegeSet());
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Added current-user-privilege-set property`);
                 break;
             case 'supported-report-set':
+            case 'D:supported-report-set':
                 comm.appendResBody(calendarUtil.getSupportedReportSet(true));
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Added supported-report-set property`);
                 break;
             case 'A:calendar-color':
             case 'calendar-color':
+                LSE_Logger.debug(`[Fennel-NG CalDAV] Skipping calendar-color property (not applicable to root)`);
+                break;
+            default:
+                LSE_Logger.warn(`[Fennel-NG CalDAV] Unhandled property: ${prop}`);
                 break;
         }
     }
-    comm.appendResBody("</d:prop>\r\n");
-    comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>\r\n");
-    comm.appendResBody("</d:propstat>\r\n");
-    comm.appendResBody("</d:response>\r\n");
-    comm.appendResBody("</d:multistatus>\r\n");
+    comm.appendResBody("</d:prop>" + config.xml_lineend);
+    comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>" + config.xml_lineend);
+    comm.appendResBody("</d:propstat>" + config.xml_lineend);
+    comm.appendResBody("</d:response>" + config.xml_lineend);
+    comm.appendResBody("</d:multistatus>" + config.xml_lineend);
+    var responseXML = comm.getResBody();
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Final XML response length: ${responseXML.length}`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Final XML response: ${responseXML}`);
     comm.flushResponse();
     LSE_Logger.debug(`[Fennel-NG CalDAV] Calendar discovery response sent`);
 }
