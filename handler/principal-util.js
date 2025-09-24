@@ -1,4 +1,15 @@
 const { XMLParser } = require('fast-xml-parser');
+const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "@_",
+    textNodeName: "#text",
+    parseAttributeValue: true
+});
+var xml = {
+    parseXml: function(body) {
+        return parser.parse(body);
+    }
+};
 function getCalendarUserAddressSet(comm)
 {
     var response = "";
@@ -48,12 +59,7 @@ function isReportPropertyCalendarProxyWriteFor(comm)
     var body = comm.getReqBody();
     if (!body) return false;
     try {
-        const parser = new XMLParser({
-            ignoreAttributes: false,
-            attributeNamePrefix: "@_",
-            textNodeName: "#text"
-        });
-        var xmlDoc = parser.parse(body);
+        var xmlDoc = xml.parseXml(body);
         var node = xmlDoc['A:expand-property'] && xmlDoc['A:expand-property']['A:property'];
         if (node && node['@_name'] === 'calendar-proxy-write-for') {
             return true;
@@ -66,10 +72,9 @@ function isReportPropertyCalendarProxyWriteFor(comm)
 }
 function replyPropertyCalendarProxyWriteFor(comm)
 {
-    var url = comm.getURL();
-    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
+    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"" + comm.getFullURL("/ns/") + " xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
     comm.appendResBody("<d:response>");
-    comm.appendResBody("    <d:href>" + url + "</d:href>");
+    comm.appendResBody("    <d:href>" + comm.getURL() + "</d:href>");
     comm.appendResBody("    <d:propstat>");
     comm.appendResBody("       <d:prop>");
     comm.appendResBody("           <cs:calendar-proxy-read-for/>");

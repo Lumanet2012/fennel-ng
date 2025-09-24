@@ -66,7 +66,12 @@ function setupRoutes() {
 }
 function onBypass(comm, path)
 {
-    LSE_Logger.info(`[Fennel-NG] Unknown URL: ${path}`);
+    LSE_Logger.info(`[Fennel-NG DEBUG] ========== BYPASS ROUTE ==========`);
+    LSE_Logger.info(`[Fennel-NG DEBUG] Unknown URL: ${path}`);
+    LSE_Logger.info(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.info(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.info(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.info(`[Fennel-NG DEBUG] =====================================`);
     var res = comm.getRes();
     res.writeHead(404);
     res.write(`${path} is not a valid CalDAV/CardDAV endpoint`);
@@ -74,18 +79,41 @@ function onBypass(comm, path)
 }
 function onHitRoot(comm)
 {
-    LSE_Logger.debug('[Fennel-NG] Called root, redirecting to /p/');
+    LSE_Logger.debug('[Fennel-NG DEBUG] ========== ROOT HIT ==========');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Redirecting to /p/`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] =============================');
     comm.getRes().writeHead(302, { 'Location': comm.getFullURL('/p/') });
     comm.flushResponse();
 }
 function onHitWellKnown(comm, type)
 {
-    LSE_Logger.debug(`[Fennel-NG] Called .well-known URL for ${type}, redirecting to ${comm.getURL("/p/")}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] ========== WELL-KNOWN HIT ==========');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Type: ${type}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
     let location = type === 'caldav' ? '/cal/' : (type === 'carddav' ? '/card/' : '/p/');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Redirecting to: ${location}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] ===================================');
     comm.getRes().writeHead(302, { 'Location': comm.getFullURL(location) });
 }
 function onHitPrincipal(comm, params)
 {
+    LSE_Logger.debug('[Fennel-NG DEBUG] ========== PRINCIPAL HIT ==========');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] ==================================');
     comm.params = params;
     if(!comm.checkPermission('/p/' + (params || ''), comm.getReq().method))
     {
@@ -100,6 +128,15 @@ function onHitPrincipal(comm, params)
 }
 function onHitCalendar(comm, username, params)
 {
+    LSE_Logger.debug('[Fennel-NG DEBUG] ========== CALENDAR HIT ==========');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Username: ${username}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] =================================');
     comm.username = username;
     comm.params = params;
     var calendarPath = comm.getFullURL("/cal/") + username + "/" + (params || '');
@@ -116,6 +153,15 @@ function onHitCalendar(comm, username, params)
 }
 function onHitAddressbook(comm, username, params)
 {
+    LSE_Logger.debug('[Fennel-NG DEBUG] ========== ADDRESSBOOK HIT ==========');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Username: ${username}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
     comm.username = username;
     comm.params = params;
     var addressbookPath = comm.getFullURL("/card/") + username + "/" + (params || '');
@@ -132,7 +178,13 @@ function onHitAddressbook(comm, username, params)
 }
 function onHitCalendarRoot(comm)
 {
-    LSE_Logger.debug('[Fennel-NG] Called calendar root');
+    LSE_Logger.debug('[Fennel-NG DEBUG] ========== CALENDAR ROOT HIT ==========');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] ======================================');
     if(!comm.checkPermission('/cal/', comm.getReq().method))
     {
         var res = comm.getRes();
@@ -142,11 +194,19 @@ function onHitCalendarRoot(comm)
         res.end();
         return;
     }
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Calling handler.handleCalendarRoot`);
     handler.handleCalendarRoot(comm);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] handler.handleCalendarRoot completed`);
 }
 function onHitAddressbookRoot(comm)
 {
-    LSE_Logger.debug('[Fennel-NG] Called addressbook root');
+    LSE_Logger.debug('[Fennel-NG DEBUG] ========== ADDRESSBOOK ROOT HIT ==========');
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] =========================================');
     if(!comm.checkPermission('/card/', comm.getReq().method))
     {
         var res = comm.getRes();
@@ -156,11 +216,19 @@ function onHitAddressbookRoot(comm)
         res.end();
         return;
     }
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Calling handler.handleAddressbookRoot`);
     handler.handleAddressbookRoot(comm);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] handler.handleAddressbookRoot completed`);
 }
 function handleRequest(req, res, next)
 {
-    LSE_Logger.debug(`[Fennel-NG] ${req.method} ${req.url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] ========== INCOMING REQUEST ==========`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${req.method}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Original URL: ${req.originalUrl || req.url}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(req.headers)}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] Remote IP: ${req.connection.remoteAddress || req.socket.remoteAddress}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] User Agent: ${req.headers['user-agent']}`);
+    LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
     var originalUrl = req.originalUrl || req.url;
     var prefix = config.public_route_prefix || '';
     var cleanUrl = originalUrl;
@@ -168,15 +236,20 @@ function handleRequest(req, res, next)
         cleanUrl = originalUrl.substring(prefix.length);
     }
     if(cleanUrl === '') cleanUrl = '/';
+    LSE_Logger.debug(`[Fennel-NG DEBUG] URL Processing: original='${originalUrl}' prefix='${prefix}' clean='${cleanUrl}'`);
     var reqBody = "";
     req.on('data', function (data)
     {
         reqBody += data.toString();
+        LSE_Logger.debug(`[Fennel-NG DEBUG] Data chunk received: ${data.length} bytes`);
     });
     req.on('end', function()
     {
+        LSE_Logger.debug(`[Fennel-NG DEBUG] Request body complete: ${reqBody.length} bytes`);
+        LSE_Logger.debug(`[Fennel-NG DEBUG] Full request body: ${reqBody}`);
         authlib.authenticateRequest(req).then(function(authResult)
         {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Authentication result: ${JSON.stringify(authResult)}`);
             if(!authResult.success)
             {
                 LSE_Logger.warn(`[Fennel-NG] Authentication failed: ${authResult.error}`);
@@ -211,18 +284,22 @@ function handleRequest(req, res, next)
 		    originalUrl: req.originalUrl
 		};
                 var comm = new communication(tempReq, res, reqBody, authResult);
-                LSE_Logger.debug(`[Fennel-NG] Authenticated user: ${authResult.username}, processing: ${cleanUrl}`);
+                LSE_Logger.debug(`[Fennel-NG DEBUG] Communication object created for user: ${authResult.username}`);
+                LSE_Logger.debug(`[Fennel-NG DEBUG] Parsing URL with crossroads: ${originalUrl}`);
                 crossroads.parse(originalUrl, [comm]);
+                LSE_Logger.debug(`[Fennel-NG DEBUG] Crossroads parsing completed`);
             }
             catch(error)
             {
                 LSE_Logger.error(`[Fennel-NG] Internal Request processing error: ${error.message}`);
+                LSE_Logger.error(`[Fennel-NG DEBUG] Error stack: ${error.stack}`);
                 res.writeHead(500);
                 res.end('Internal server error');
             }
         }).catch(function(error)
         {
             LSE_Logger.error(`[Fennel-NG] Authentication error: ${error.message}`);
+            LSE_Logger.error(`[Fennel-NG DEBUG] Auth error stack: ${error.stack}`);
             res.writeHead(500);
             res.end('Authentication system error');
         });
@@ -230,6 +307,7 @@ function handleRequest(req, res, next)
     req.on('error', function(error)
     {
         LSE_Logger.error(`[Fennel-NG] Request error: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Request error stack: ${error.stack}`);
         res.writeHead(400);
         res.end('Bad request');
     });
@@ -318,3 +396,4 @@ module.exports = {
     version: config.version_nr,
     routes: getRoutes
 };
+
