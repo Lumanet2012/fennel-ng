@@ -85,7 +85,7 @@ async function checkLDAP(username, password, callback)
                     var Argon2Auth = require('./argon2-auth');
                     var passwordHash = await Argon2Auth.hashPassword(password);
                     var userData = {
-                        username: ldapUsername,
+                        username: username,
                         passwordHash: passwordHash,
                         groups: authResult.groups,
                         lastAuthenticated: Math.floor(Date.now() / 1000)

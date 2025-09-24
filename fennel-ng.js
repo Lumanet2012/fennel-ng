@@ -51,16 +51,17 @@ function initializeFennelNG()
 }
 function setupRoutes() {
     var prefix = config.public_route_prefix || '';
+    var caldav_username = username.replace(/@/g, '-');
     LSE_Logger.debug(`[Fennel-NG] Registering route: ${prefix + '/cal/'}`);
     crossroads.addRoute(prefix + '/', onHitRoot);
     crossroads.addRoute(prefix + '/.well-known/{type}', onHitWellKnown);
     crossroads.addRoute(prefix + '/p/{params*}', onHitPrincipal);
     crossroads.addRoute(prefix + '/cal/', onHitCalendarRoot);
     crossroads.addRoute(prefix + '/cal', onHitCalendarRoot);
-    crossroads.addRoute(prefix + '/cal/{username}/{params*}', onHitCalendar);
+    crossroads.addRoute(prefix + '/cal/{caldav_username}/{params*}', onHitCalendar);
     crossroads.addRoute(prefix + '/card/', onHitAddressbookRoot);
     crossroads.addRoute(prefix + '/card', onHitAddressbookRoot);
-    crossroads.addRoute(prefix + '/card/{username}/{params*}', onHitAddressbook);
+    crossroads.addRoute(prefix + '/card/{caldav_username}/{params*}', onHitAddressbook);
     LSE_Logger.debug(`[Fennel-NG] onBypass: ${onBypass}`);
     crossroads.bypassed.add(onBypass);
 }
@@ -138,8 +139,9 @@ function onHitCalendar(comm, username, params)
     LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
     LSE_Logger.debug('[Fennel-NG DEBUG] =================================');
     comm.username = username;
+    var caldav_username = username.replace(/@/g, '-');
     comm.params = params;
-    var calendarPath = comm.getFullURL("/cal/") + username + "/" + (params || '');
+    var calendarPath = comm.getFullURL("/cal/") + caldav_username + "/" + (params || '');
     if(!comm.checkPermission(calendarPath, comm.getReq().method))
     {
         var res = comm.getRes();
@@ -163,8 +165,9 @@ function onHitAddressbook(comm, username, params)
     LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
     LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
     comm.username = username;
+    var caldav_username = username.replace(/@/g, '-')
     comm.params = params;
-    var addressbookPath = comm.getFullURL("/card/") + username + "/" + (params || '');
+    var addressbookPath = comm.getFullURL("/card/") + caldav_username + "/" + (params || '');
     if(!comm.checkPermission(addressbookPath, comm.getReq().method))
     {
         var res = comm.getRes();
