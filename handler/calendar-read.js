@@ -143,7 +143,8 @@ function handlePropfindForCalendarId(comm, calendarUri)
             var xmlDoc = xml.parseXml(comm.getReqBody());
             var node = xmlDoc.propfind;
             var childs = node && node.prop ? Object.keys(node.prop) : [];
-            redis.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
+            var redisClient = redis.initializeRedis();
+            redisClient.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
                 var syncToken = cachedSyncToken || calendar.synctoken;
                 var response = returnPropfindElements(comm, calendar, childs, syncToken);
                 comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend);
@@ -372,7 +373,7 @@ function returnCalendar(comm, calendar, childs)
     response += "		<d:href>" + comm.getCalendarURL(null, calendar.uri) + "</d:href>" + config.xml_lineend;
     response += "		<d:propstat>" + config.xml_lineend;
     response += "			<d:prop>" + config.xml_lineend;
-    redis.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
+    redisClient.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
         var syncToken = cachedSyncToken || calendar.synctoken;
         response += returnPropfindElements(comm, calendar, childs, syncToken);
     }).catch(function(error) {
@@ -569,7 +570,7 @@ function handleReportSyncCollection(comm)
                         }
                     }
                 }
-                redis.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
+                redisClient.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
                     var syncToken = cachedSyncToken || calendar.synctoken;
                     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">" + config.xml_lineend);
                     comm.appendResBody(response);
