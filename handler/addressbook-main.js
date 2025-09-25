@@ -10,6 +10,7 @@ var xml = {
         return parser.parse(body);
     }
 };
+var config = require('../config').config;
 var xh = require("../libs/xmlhelper");
 var redis = require('../libs/redis');
 var VCARDS = require('../libs/db').VCARDS;
@@ -33,12 +34,12 @@ function put(comm)
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.put called`);
     var vcardUri = comm.getFilenameFromPath(false);
     var addressbookUri = comm.getCalIdFromURL();
-    var username = comm.getUser().getUserName();
+    var realUsername = comm.getRealUsername();
     var body = comm.getReqBody();
     var match = body.search(/X-ADDRESSBOOKSERVER-KIND:group/);
     var isGroup = (match >= 0);
     LSE_Logger.debug(`[Fennel-NG CardDAV] Putting vCard: ${vcardUri} to addressbook: ${addressbookUri}, isGroup: ${isGroup}`);
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
@@ -68,15 +69,15 @@ function put(comm)
                 comm.setHeader("ETag", `"${existingVCard.etag}"`);
                 comm.setResponseCode(412);
                 comm.appendResBody(xh.getXMLHead());
-                comm.appendResBody("<d:error xmlns:d=\"DAV:\">\r\n");
-                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>\r\n");
-                comm.appendResBody("</d:error>\r\n");
+                comm.appendResBody("<d:error xmlns:d=\"DAV:\">" + config.xml_lineend);
+                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>" + config.xml_lineend);
+                comm.appendResBody("</d:error>" + config.xml_lineend);
                 comm.flushResponse();
                 return;
             }
             var isCreating = !existingVCard;
             var operation = isCreating ? 1 : 2;
-            return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
+            return redis.incrementAddressbookSyncToken(addressbookUri, realUsername).then(function(newSyncToken)
             {
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Updated sync token: ${newSyncToken} for addressbook: ${addressbookUri}`);
                 if(existingVCard)
@@ -139,26 +140,26 @@ function proppatch(comm)
         }
         var props = propUpdate.set.prop;
         var addressbookUri = comm.getCalIdFromURL();
-        var username = comm.getUser().getUserName();
+        var realUsername = comm.getRealUsername();
         var response = "";
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: addressbookUri} }).then(function(adb)
         {
             if(!adb)
             {
                 LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found for proppatch: ${addressbookUri}`);
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-                comm.appendResBody("<d:response>\r\n");
+                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend);
+                comm.appendResBody("<d:response>" + config.xml_lineend);
                 comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>");
-                comm.appendResBody("<d:propstat>\r\n");
-                comm.appendResBody("<d:prop>\r\n");
+                comm.appendResBody("<d:propstat>" + config.xml_lineend);
+                comm.appendResBody("<d:prop>" + config.xml_lineend);
                 if(props.displayname) response += "<d:displayname/>";
                 if(props.description) response += "<card:description/>";
                 comm.appendResBody(response);
-                comm.appendResBody("</d:prop>\r\n");
-                comm.appendResBody("<d:status>HTTP/1.1 403 Forbidden</d:status>\r\n");
-                comm.appendResBody("</d:propstat>\r\n");
-                comm.appendResBody("</d:response>\r\n");
-                comm.appendResBody("</d:multistatus>\r\n");
+                comm.appendResBody("</d:prop>" + config.xml_lineend);
+                comm.appendResBody("<d:status>HTTP/1.1 403 Forbidden</d:status>" + config.xml_lineend);
+                comm.appendResBody("</d:propstat>" + config.xml_lineend);
+                comm.appendResBody("</d:response>" + config.xml_lineend);
+                comm.appendResBody("</d:multistatus>" + config.xml_lineend);
                 comm.flushResponse();
                 return;
             }
@@ -180,7 +181,7 @@ function proppatch(comm)
             {
                 if(updated)
                 {
-                    return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
+                    return redis.incrementAddressbookSyncToken(addressbookUri, realUsername).then(function(newSyncToken)
                     {
                         LSE_Logger.info(`[Fennel-NG CardDAV] Addressbook properties updated, sync token: ${newSyncToken}`);
                     });
@@ -188,17 +189,17 @@ function proppatch(comm)
                 return Promise.resolve();
             }).then(function()
             {
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-                comm.appendResBody("<d:response>\r\n");
-                comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>\r\n");
-                comm.appendResBody("<d:propstat>\r\n");
-                comm.appendResBody("<d:prop>\r\n");
+                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend);
+                comm.appendResBody("<d:response>" + config.xml_lineend);
+                comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>" + config.xml_lineend);
+                comm.appendResBody("<d:propstat>" + config.xml_lineend);
+                comm.appendResBody("<d:prop>" + config.xml_lineend);
                 comm.appendResBody(response);
-                comm.appendResBody("</d:prop>\r\n");
-                comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>\r\n");
-                comm.appendResBody("</d:propstat>\r\n");
-                comm.appendResBody("</d:response>\r\n");
-                comm.appendResBody("</d:multistatus>\r\n");
+                comm.appendResBody("</d:prop>" + config.xml_lineend);
+                comm.appendResBody("<d:status>HTTP/1.1 200 OK</d:status>" + config.xml_lineend);
+                comm.appendResBody("</d:propstat>" + config.xml_lineend);
+                comm.appendResBody("</d:response>" + config.xml_lineend);
+                comm.appendResBody("</d:multistatus>" + config.xml_lineend);
                 comm.flushResponse();
             });
         }).catch(function(error)
