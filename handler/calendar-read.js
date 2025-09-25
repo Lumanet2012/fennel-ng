@@ -307,6 +307,15 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
             case 'quota-used-bytes':
                 response += "";
                 break;
+            case 'resourcetype':
+                response += "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>" + config.xml_lineend;
+                break;
+            case 'displayname':
+                response += "<d:displayname>" + calendar.displayname + "</d:displayname>" + config.xml_lineend;
+                break;
+            case 'current-user-privilege-set':
+                response += calendarUtil.getCurrentUserPrivilegeSet();
+                break;
             case 'refreshrate':
                 response += "";
                 break;
