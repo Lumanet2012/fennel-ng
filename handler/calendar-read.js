@@ -377,23 +377,15 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
 function returnCalendar(comm, calendar, childs)
 {
     var response = "";
-    var caldav_username = comm.getcaldav_username();
-    response += "	<d:response>" + config.xml_lineend;
-    response += "		<d:href>" + comm.getCalendarURL(null, calendar.uri) + "</d:href>" + config.xml_lineend;
-    response += "		<d:propstat>" + config.xml_lineend;
-    response += "			<d:prop>" + config.xml_lineend;
-    var redisClient = redis.initializeRedis();
-    redisClient.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
-        var syncToken = cachedSyncToken || calendar.synctoken;
-        response += returnPropfindElements(comm, calendar, childs, syncToken);
-    }).catch(function(error) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] Redis error in returnCalendar: ${error}`);
-        response += returnPropfindElements(comm, calendar, childs, calendar.synctoken);
-    });
-    response += "			</d:prop>" + config.xml_lineend;
-    response += "			<d:status>HTTP/1.1 200 OK</d:status>" + config.xml_lineend;
-    response += "		</d:propstat>" + config.xml_lineend;
-    response += "	</d:response>" + config.xml_lineend;
+    response += "<d:response>" + config.xml_lineend;
+    response += "<d:href>" + comm.getCalendarURL(null, calendar.uri) + "</d:href>" + config.xml_lineend;
+    response += "<d:propstat>" + config.xml_lineend;
+    response += "<d:prop>" + config.xml_lineend;
+    response += returnPropfindElements(comm, calendar, childs, calendar.synctoken);
+    response += "</d:prop>" + config.xml_lineend;
+    response += "<d:status>HTTP/1.1 200 OK</d:status>" + config.xml_lineend;
+    response += "</d:propstat>" + config.xml_lineend;
+    response += "</d:response>" + config.xml_lineend;
     return response;
 }
 function getCalendarRootNodeResponse(comm, childs)
