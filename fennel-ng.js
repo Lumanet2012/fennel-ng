@@ -57,6 +57,8 @@ function setupRoutes() {
     crossroads.addRoute(prefix + '/p/{params*}', onHitPrincipal);
     crossroads.addRoute(prefix + '/cal/', onHitCalendarRoot);
     crossroads.addRoute(prefix + '/cal', onHitCalendarRoot);
+    crossroads.addRoute(prefix + '/cal/{caldav_username}', onHitCalendar);
+    crossroads.addRoute(prefix + '/cal/{caldav_username}/', onHitCalendar);
     crossroads.addRoute(prefix + '/cal/{caldav_username}/{params*}', onHitCalendar);
     crossroads.addRoute(prefix + '/card/', onHitAddressbookRoot);
     crossroads.addRoute(prefix + '/card', onHitAddressbookRoot);
