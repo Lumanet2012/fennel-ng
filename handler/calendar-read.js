@@ -208,8 +208,8 @@ function handlePropfindForUser(comm)
         var childs = node && node.prop ? Object.keys(node.prop) : [];
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend;
         response += getCalendarRootNodeResponse(comm, childs);
-        var username = comm.getusername();
-        var principalUri = 'principals/' + username;
+        var caldav_username = comm.getcaldav_username();
+        var principalUri = 'principals/' + caldav_username;
         CALENDARS.findAndCountAll({ where: {principaluri: principalUri}, order: [['calendarorder', 'ASC']] }).then(function(result)
         {
             for (var i=0; i < result.count; ++i)
