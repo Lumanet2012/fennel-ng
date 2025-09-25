@@ -373,6 +373,7 @@ function returnCalendar(comm, calendar, childs)
     response += "		<d:href>" + comm.getCalendarURL(null, calendar.uri) + "</d:href>" + config.xml_lineend;
     response += "		<d:propstat>" + config.xml_lineend;
     response += "			<d:prop>" + config.xml_lineend;
+    var redisClient = redis.initializeRedis();
     redisClient.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
         var syncToken = cachedSyncToken || calendar.synctoken;
         response += returnPropfindElements(comm, calendar, childs, syncToken);
@@ -570,6 +571,7 @@ function handleReportSyncCollection(comm)
                         }
                     }
                 }
+                var redisClient = redis.initializeRedis();
                 redisClient.get(`sync:cal:${calendar.id}`).then(function(cachedSyncToken) {
                     var syncToken = cachedSyncToken || calendar.synctoken;
                     comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">" + config.xml_lineend);
