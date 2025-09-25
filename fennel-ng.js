@@ -51,7 +51,6 @@ function initializeFennelNG()
 }
 function setupRoutes() {
     var prefix = config.public_route_prefix || '';
-    var caldav_username = username.replace(/@/g, '-');
     LSE_Logger.debug(`[Fennel-NG] Registering route: ${prefix + '/cal/'}`);
     crossroads.addRoute(prefix + '/', onHitRoot);
     crossroads.addRoute(prefix + '/.well-known/{type}', onHitWellKnown);
@@ -127,10 +126,10 @@ function onHitPrincipal(comm, params)
     }
     handler.handlePrincipal(comm);
 }
-function onHitCalendar(comm, username, params)
+function onHitCalendar(comm, caldav_username, params)
 {
     LSE_Logger.debug('[Fennel-NG DEBUG] ========== CALENDAR HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Username: ${username}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] CalDAV Username: ${caldav_username}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
@@ -138,8 +137,9 @@ function onHitCalendar(comm, username, params)
     LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
     LSE_Logger.debug('[Fennel-NG DEBUG] =================================');
+    var username = caldav_username.replace(/-/g, '@');
     comm.username = username;
-    var caldav_username = username.replace(/@/g, '-');
+    comm.caldav_username = caldav_username;
     comm.params = params;
     var calendarPath = comm.getFullURL("/cal/") + caldav_username + "/" + (params || '');
     if(!comm.checkPermission(calendarPath, comm.getReq().method))
@@ -153,10 +153,10 @@ function onHitCalendar(comm, username, params)
     }
     handler.handleCalendar(comm);
 }
-function onHitAddressbook(comm, username, params)
+function onHitAddressbook(comm, caldav_username, params)
 {
     LSE_Logger.debug('[Fennel-NG DEBUG] ========== ADDRESSBOOK HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Username: ${username}`);
+    LSE_Logger.debug(`[Fennel-NG DEBUG] CalDAV Username: ${caldav_username}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
@@ -164,8 +164,9 @@ function onHitAddressbook(comm, username, params)
     LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
     LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
     LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
+    var username = caldav_username.replace(/-/g, '@');
     comm.username = username;
-    var caldav_username = username.replace(/@/g, '-')
+    comm.caldav_username = caldav_username;
     comm.params = params;
     var addressbookPath = comm.getFullURL("/card/") + caldav_username + "/" + (params || '');
     if(!comm.checkPermission(addressbookPath, comm.getReq().method))
@@ -278,14 +279,14 @@ function handleRequest(req, res, next)
             }
             try
             {
-		var tempReq = {
-    		    url: cleanUrl,
-    		    method: req.method,
-		    headers: req.headers || {},
-		    connection: req.connection,
-		    socket: req.socket,
-		    originalUrl: req.originalUrl
-		};
+                var tempReq = {
+                    url: cleanUrl,
+                    method: req.method,
+                    headers: req.headers || {},
+                    connection: req.connection,
+                    socket: req.socket,
+                    originalUrl: req.originalUrl
+                };
                 var comm = new communication(tempReq, res, reqBody, authResult);
                 LSE_Logger.debug(`[Fennel-NG DEBUG] Communication object created for user: ${authResult.username}`);
                 LSE_Logger.debug(`[Fennel-NG DEBUG] Parsing URL with crossroads: ${originalUrl}`);
@@ -376,7 +377,7 @@ function shutdown()
 {
     LSE_Logger.info('[Fennel-NG] Shutting down CalDAV/CardDAV server');
     return Promise.all([
-        redis.initializeRedis().then(function(client) { 
+        redis.initializeRedis().then(function(client) {
             if(client && client.disconnect) {
                 return client.disconnect();
             }
@@ -399,4 +400,3 @@ module.exports = {
     version: config.version_nr,
     routes: getRoutes
 };
-

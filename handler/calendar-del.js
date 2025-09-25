@@ -1,3 +1,4 @@
+var config = require('../config').config;
 var redis = require('../libs/redis');
 var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
 var CALENDARS = require('../libs/db').CALENDARS;
@@ -19,8 +20,8 @@ function del(comm)
     if(isRoot === true)
     {
         var calendarUri = comm.getPathElement(3);
-        var username = comm.getUser().getUserName();
-        var principalUri = 'principals/' + username;
+        var realUsername = comm.getRealUsername();
+        var principalUri = 'principals/' + realUsername;
         CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
         {
             if(calendar === null)

@@ -1,3 +1,4 @@
+var config = require('../config').config;
 var xh = require("../libs/xmlhelper");
 var redis = require('../libs/redis');
 var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
@@ -5,8 +6,8 @@ var CALENDARS = require('../libs/db').CALENDARS;
 function put(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.put called`);
-    var username = comm.getUser().getUserName();
-    var principalUri = 'principals/' + username;
+    var realUsername = comm.getRealUsername();
+    var principalUri = 'principals/' + realUsername;
     var calendarUri = comm.getCalIdFromURL();
     var eventUri = comm.getFilenameFromPath(false);
     var calendarData = comm.getReqBody();
@@ -34,9 +35,9 @@ function put(comm)
                 comm.setHeader("ETag", `"${existingCalendarObject.etag}"`);
                 comm.setResponseCode(412);
                 comm.appendResBody(xh.getXMLHead());
-                comm.appendResBody("<d:error xmlns:d=\"DAV:\">\r\n");
-                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>\r\n");
-                comm.appendResBody("</d:error>\r\n");
+                comm.appendResBody("<d:error xmlns:d=\"DAV:\">" + config.xml_lineend);
+                comm.appendResBody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>" + config.xml_lineend);
+                comm.appendResBody("</d:error>" + config.xml_lineend);
                 comm.flushResponse();
                 return;
             }
@@ -45,9 +46,9 @@ function put(comm)
                 comm.setStandardHeaders();
                 comm.setResponseCode(412);
                 comm.appendResBody(xh.getXMLHead());
-                comm.appendResBody("<d:error xmlns:d=\"DAV:\"n");
-                comm.appendResBody("<d:precondition-failed>If-Match header specified, but ETag didn't match</d:precondition-failed>\r\n");
-                comm.appendResBody("</d:error>\r\n");
+                comm.appendResBody("<d:error xmlns:d=\"DAV:\">" + config.xml_lineend);
+                comm.appendResBody("<d:precondition-failed>If-Match header specified, but ETag didn't match</d:precondition-failed>" + config.xml_lineend);
+                comm.appendResBody("</d:error>" + config.xml_lineend);
                 comm.flushResponse();
                 return;
             }
@@ -73,7 +74,7 @@ function put(comm)
             return savePromise.then(function(calendarObject) {
                 return updateCalendarSyncToken(calendar.id).then(function(newSyncToken) {
                     LSE_Logger.info(`[Fennel-NG CalDAV] ${isCreating ? 'Created' : 'Updated'} calendar object: ${eventUri}, sync token: ${newSyncToken}`);
-                    redis.setCalendarSyncToken(calendarUri, username, newSyncToken);
+                    redis.setCalendarSyncToken(calendarUri, realUsername, newSyncToken);
                     comm.setStandardHeaders();
                     comm.setHeader("ETag", `"${etag}"`);
                     comm.setHeader("Last-Modified", new Date(now * 1000).toUTCString());
@@ -145,3 +146,4 @@ function updateCalendarSyncToken(calendarId)
 module.exports = {
     put: put
 };
+

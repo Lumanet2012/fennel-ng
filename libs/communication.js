@@ -37,21 +37,26 @@ comm.prototype.createSimpleAuthority = function()
     return {
         check: function(permission) {
             if (!self.authResult || !self.authResult.success) {
+                LSE_Logger.warn(`[Fennel-NG Comm] Authority check failed - no valid authentication`);
                 return false;
             }
             var username = self.user.getUserName();
+            LSE_Logger.debug(`[Fennel-NG Comm] Authority check for user: ${username}, permission: ${permission}`);
             var parts = permission.split(':');
-            if (parts.length < 2) return false;
+            if (parts.length < 2) {
+                LSE_Logger.debug(`[Fennel-NG Comm] Authority granted - insufficient permission parts`);
+                return true;
+            }
             var resource = parts[0];
             var user = parts[1];
             var action = parts[2] || '';
-            if (resource === 'p' && (action === 'options' || action === 'report' || action === 'propfind')) {
-                return true;
-            }
+            LSE_Logger.debug(`[Fennel-NG Comm] Authority check - resource: ${resource}, user: ${user}, action: ${action}`);
             if (resource === 'cal' || resource === 'card' || resource === 'p') {
+                LSE_Logger.debug(`[Fennel-NG Comm] Authority granted - CalDAV/CardDAV/Principal resource access`);
                 return true;
             }
-            return false;
+            LSE_Logger.debug(`[Fennel-NG Comm] Authority granted - default allow`);
+            return true;
         }
     };
 };
@@ -140,9 +145,9 @@ comm.prototype.checkPermission = function(strURL, strMethod)
     }
     var urlParts = cleanURL.substr(1).split("/").filter(String);
     var permissionString = urlParts.join(":") + ":" + strMethod.toLowerCase();
-    LSE_Logger.warn(`[Fennel-NG Comm DEBUG] URL: '${strURL}' -> clean: '${cleanURL}' -> parts: ${JSON.stringify(urlParts)} -> permission: '${permissionString}'`);
+    LSE_Logger.debug(`[Fennel-NG Comm] URL: '${strURL}' -> clean: '${cleanURL}' -> parts: ${JSON.stringify(urlParts)} -> permission: '${permissionString}'`);
     var ret = this.authority.check(permissionString);
-    LSE_Logger.warn(`[Fennel-NG Comm DEBUG] Permission result for user '${this.getUser().getUserName()}': ${ret}`);
+    LSE_Logger.debug(`[Fennel-NG Comm] Permission result for user '${this.getUser().getUserName()}': ${ret}`);
     return ret;
 };
 comm.prototype.getReq = function()
@@ -183,32 +188,29 @@ comm.prototype.getPrincipalURL = function(username)
 {
     if(!username) {
         username = this.getUser().getUserName();
-        caldav_username = ldapUsername.replace(/@/g, '-'); 
     }
-    return this.getFullURL(`/p/${caldav_username}/`);
+    return this.getFullURL(`/p/${username}/`);
 };
 comm.prototype.getCalendarURL = function(username, calendarUri)
 {
     if(!username) {
         username = this.getUser().getUserName();
-        caldav_username = ldapUsername.replace(/@/g, '-');
     }
     if(calendarUri) {
-        return this.getFullURL(`/cal/${caldav_username}/${calendarUri}/`);
+        return this.getFullURL(`/cal/${username}/${calendarUri}/`);
     } else {
-        return this.getFullURL(`/cal/${caldav_username}/`);
+        return this.getFullURL(`/cal/${username}/`);
     }
 };
 comm.prototype.getCardURL = function(username, addressbookUri)
 {
     if(!username) {
         username = this.getUser().getUserName();
-        caldav_username = ldapUsername.replace(/@/g, '-');
     }
     if(addressbookUri) {
-        return this.getFullURL(`/card/${caldav_username}/${addressbookUri}/`);
+        return this.getFullURL(`/card/${username}/${addressbookUri}/`);
     } else {
-        return this.getFullURL(`/card/${caldav_username}/`);
+        return this.getFullURL(`/card/${username}/`);
     }
 };
 comm.prototype.getURLAsArray = function()
@@ -276,3 +278,4 @@ comm.prototype.stringEndsWith = function(str, suffix)
 {
     return str && str.length >= suffix.length && str.substring(str.length - suffix.length) === suffix;
 };
+

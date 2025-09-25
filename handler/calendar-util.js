@@ -1,3 +1,4 @@
+var config = require('../config').config;
 var log = LSE_Logger;
 function getSupportedReportSet(isRoot)
 {
@@ -5,63 +6,64 @@ function getSupportedReportSet(isRoot)
     response += "<d:supported-report-set>";
     if(!isRoot)
     {
-        response += "<d:supported-report><d:report><cal:calendar-multiget/></d:report></d:supported-report>\r\n";
-        response += "<d:supported-report><d:report><cal:calendar-query/></d:report></d:supported-report>\r\n";
-        response += "<d:supported-report><d:report><cal:free-busy-query/></d:report></d:supported-report>\r\n";
+        response += "<d:supported-report><d:report><cal:calendar-multiget/></d:report></d:supported-report>" + config.xml_lineend;
+        response += "<d:supported-report><d:report><cal:calendar-query/></d:report></d:supported-report>" + config.xml_lineend;
+        response += "<d:supported-report><d:report><cal:free-busy-query/></d:report></d:supported-report>" + config.xml_lineend;
     }
-    response += "<d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>\r\n";
-    response += "<d:supported-report><d:report><d:expand-property/></d:report></d:supported-report>\r\n";
-    response += "<d:supported-report><d:report><d:principal-property-search/></d:report></d:supported-report>\r\n";
-    response += "<d:supported-report><d:report><d:principal-search-property-set/></d:report></d:supported-report>\r\n";
-    response += "</d:supported-report-set>\r\n";
+    response += "<d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>" + config.xml_lineend;
+    response += "<d:supported-report><d:report><d:expand-property/></d:report></d:supported-report>" + config.xml_lineend;
+    response += "<d:supported-report><d:report><d:principal-property-search/></d:report></d:supported-report>" + config.xml_lineend;
+    response += "<d:supported-report><d:report><d:principal-search-property-set/></d:report></d:supported-report>" + config.xml_lineend;
+    response += "</d:supported-report-set>" + config.xml_lineend;
     return response;
 }
 function getCurrentUserPrivilegeSet()
 {
     var response = "";
-    response += "<d:current-user-privilege-set>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><cal:read-free-busy/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-acl/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-content/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-properties/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:bind/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:unbind/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:unlock/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-acl/></d:privilege>\r\n";
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-current-user-privilege-set/></d:privilege>\r\n";
-    response += "</d:current-user-privilege-set>\r\n";
+    response += "<d:current-user-privilege-set>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><cal:read-free-busy/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-acl/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-content/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-properties/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:bind/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:unbind/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:unlock/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:read/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-acl/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-current-user-privilege-set/></d:privilege>" + config.xml_lineend;
+    response += "</d:current-user-privilege-set>" + config.xml_lineend;
     return response;
 }
 function getACL(comm)
 {
-    var username = comm.getUser().getUserName();
+    var realUsername = comm.getRealUsername();
+    var caldavUsername = comm.getCaldavUsername();
     var response = "";
-    var lineend = "\r\n";
+    var lineend = config.xml_lineend;
     response += "<d:acl>" + lineend;
     response += "    <d:ace>" + lineend;
-    response += "        <d:principal><d:href>/p/" + username + "</d:href></d:principal>" + lineend;
+    response += "        <d:principal><d:href>" + comm.getPrincipalURL() + "</d:href></d:principal>" + lineend;
     response += "        <d:grant><d:privilege><d:read/></d:privilege></d:grant>" + lineend;
     response += "        <d:protected/>" + lineend;
     response += "    </d:ace>" + lineend;
     response += "    <d:ace>" + lineend;
-    response += "        <d:principal><d:href>/p/" + username + "</d:href></d:principal>" + lineend;
+    response += "        <d:principal><d:href>" + comm.getPrincipalURL() + "</d:href></d:principal>" + lineend;
     response += "        <d:grant><d:privilege><d:write/></d:privilege></d:grant>" + lineend;
     response += "        <d:protected/>" + lineend;
     response += "    </d:ace>" + lineend;
     response += "    <d:ace>" + lineend;
-    response += "        <d:principal><d:href>/p/" + username + "/calendar-proxy-write/</d:href></d:principal>" + lineend;
+    response += "        <d:principal><d:href>" + comm.getPrincipalURL() + "calendar-proxy-write/</d:href></d:principal>" + lineend;
     response += "        <d:grant><d:privilege><d:read/></d:privilege></d:grant>" + lineend;
     response += "        <d:protected/>" + lineend;
     response += "    </d:ace>" + lineend;
     response += "    <d:ace>" + lineend;
-    response += "        <d:principal><d:href>/p/" + username + "/calendar-proxy-write/</d:href></d:principal>" + lineend;
+    response += "        <d:principal><d:href>" + comm.getPrincipalURL() + "calendar-proxy-write/</d:href></d:principal>" + lineend;
     response += "        <d:grant><d:privilege><d:write/></d:privilege></d:grant>" + lineend;
     response += "        <d:protected/>" + lineend;
     response += "    </d:ace>" + lineend;
     response += "    <d:ace>" + lineend;
-    response += "        <d:principal><d:href>/p/" + username + "/calendar-proxy-read/</d:href></d:principal>" + lineend;
+    response += "        <d:principal><d:href>" + comm.getPrincipalURL() + "calendar-proxy-read/</d:href></d:principal>" + lineend;
     response += "        <d:grant><d:privilege><d:read/></d:privilege></d:grant>" + lineend;
     response += "        <d:protected/>" + lineend;
     response += "    </d:ace>" + lineend;
@@ -80,10 +82,10 @@ function getACL(comm)
 function returnOutbox(comm)
 {
     var response = "";
-    var username = comm.getUser().getUserName();
-    var lineend = "\r\n";
+    var caldavUsername = comm.getCaldavUsername();
+    var lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
-    response += "   <d:href>" + comm.getURL("/cal/") + username + "/outbox/</d:href>" + lineend;
+    response += "   <d:href>" + comm.getCalendarURL(null, "outbox") + "</d:href>" + lineend;
     response += "    <d:propstat>" + lineend;
     response += "        <d:prop>" + lineend;
     response += "            <d:current-user-privilege-set>" + lineend;
@@ -104,7 +106,7 @@ function returnOutbox(comm)
     response += "               </d:privilege>" + lineend;
     response += "           </d:current-user-privilege-set>" + lineend;
     response += "           <d:owner>" + lineend;
-    response += "               <d:href>/p/" + username + "/</d:href>" + lineend;
+    response += "               <d:href>" + comm.getPrincipalURL() + "</d:href>" + lineend;
     response += "           </d:owner>" + lineend;
     response += "           <d:resourcetype>" + lineend;
     response += "              <d:collection/>" + lineend;
@@ -136,10 +138,10 @@ function returnOutbox(comm)
 function returnNotifications(comm)
 {
     var response = "";
-    var username = comm.getUser().getUserName();
-    var lineend = "\r\n";
+    var caldavUsername = comm.getCaldavUsername();
+    var lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
-    response += "<d:href>" + comm.getURL("/cal/") + username + "/notifications/</d:href>" + lineend;
+    response += "<d:href>" + comm.getCalendarURL(null, "notifications") + "</d:href>" + lineend;
     response += "<d:propstat>" + lineend;
     response += "    <d:prop>" + lineend;
     response += "        <d:current-user-privilege-set>" + lineend;
@@ -175,7 +177,7 @@ function returnNotifications(comm)
     response += "            </d:privilege>" + lineend;
     response += "       </d:current-user-privilege-set>" + lineend;
     response += "       <d:owner>" + lineend;
-    response += "           <d:href>" + comm.getURL("/p/") + username + "/</d:href>" + lineend;
+    response += "           <d:href>" + comm.getPrincipalURL() + "</d:href>" + lineend;
     response += "       </d:owner>" + lineend;
     response += "       <d:resourcetype>" + lineend;
     response += "           <d:collection/>" + lineend;
