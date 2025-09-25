@@ -316,6 +316,9 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
             case 'current-user-privilege-set':
                 response += calendarUtil.getCurrentUserPrivilegeSet();
                 break;
+            case 'calendar-color':
+                response += "<A:calendar-color xmlns:A=\"http://apple.com/ns/ical/\">" + (calendar.calendarcolor || "#0066CC") + "</A:calendar-color>" + config.xml_lineend;
+                break;
             case 'refreshrate':
                 response += "";
                 break;
