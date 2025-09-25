@@ -15,7 +15,7 @@ function getCalendarUserAddressSet(comm)
 {
     var response = "";
     response += "        <cal:calendar-user-address-set>" + config.xml_lineend;
-    response += "        	<d:href>mailto:" + comm.getRealUsername() + "</d:href>" + config.xml_lineend;
+    response += "        	<d:href>mailto:" + comm.getusername() + "</d:href>" + config.xml_lineend;
     response += "        	<d:href>" + comm.getPrincipalURL() + "</d:href>" + config.xml_lineend;
     response += "        </cal:calendar-user-address-set>" + config.xml_lineend;
     return response;

@@ -21,12 +21,12 @@ function del(comm)
             isRoot = false;
         }
     }
-    var realUsername = comm.getRealUsername();
+    var username = comm.getusername();
     if(isRoot === true)
     {
         var addressbookUri = comm.getPathElement(3);
         LSE_Logger.debug(`[Fennel-NG CardDAV] Deleting addressbook: ${addressbookUri}`);
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: addressbookUri} }).then(function(adb)
+        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
         {
             if(adb === null)
             {
@@ -35,7 +35,7 @@ function del(comm)
                 comm.flushResponse();
                 return;
             }
-            return redis.incrementAddressbookSyncToken(adb.uri, realUsername).then(function(newSyncToken)
+            return redis.incrementAddressbookSyncToken(adb.uri, username).then(function(newSyncToken)
             {
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Updated sync token for addressbook deletion: ${newSyncToken}`);
                 return ADDRESSBOOKCHANGES.create({
@@ -54,7 +54,7 @@ function del(comm)
             }).then(function()
             {
                 LSE_Logger.info(`[Fennel-NG CardDAV] Successfully deleted addressbook: ${addressbookUri}`);
-                return redis.deleteAddressbookSyncToken(adb.uri, realUsername);
+                return redis.deleteAddressbookSyncToken(adb.uri, username);
             }).then(function()
             {
                 comm.flushResponse();
@@ -71,7 +71,7 @@ function del(comm)
         var vcardUri = comm.getFilenameFromPath(true);
         var addressbookUri = comm.getPathElement(3);
         LSE_Logger.debug(`[Fennel-NG CardDAV] Deleting vCard: ${vcardUri} from addressbook: ${addressbookUri}`);
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: addressbookUri} }).then(function(adb)
+        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
         {
             if(!adb)
             {
@@ -90,7 +90,7 @@ function del(comm)
                 comm.flushResponse();
                 return;
             }
-            return redis.incrementAddressbookSyncToken(addressbookUri, realUsername).then(function(newSyncToken)
+            return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
             {
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Updated sync token for vCard deletion: ${newSyncToken}`);
                 return ADDRESSBOOKCHANGES.create({

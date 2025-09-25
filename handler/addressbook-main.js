@@ -34,12 +34,12 @@ function put(comm)
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.put called`);
     var vcardUri = comm.getFilenameFromPath(false);
     var addressbookUri = comm.getCalIdFromURL();
-    var realUsername = comm.getRealUsername();
+    var username = comm.getusername();
     var body = comm.getReqBody();
     var match = body.search(/X-ADDRESSBOOKSERVER-KIND:group/);
     var isGroup = (match >= 0);
     LSE_Logger.debug(`[Fennel-NG CardDAV] Putting vCard: ${vcardUri} to addressbook: ${addressbookUri}, isGroup: ${isGroup}`);
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: addressbookUri} }).then(function(adb)
+    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
@@ -77,7 +77,7 @@ function put(comm)
             }
             var isCreating = !existingVCard;
             var operation = isCreating ? 1 : 2;
-            return redis.incrementAddressbookSyncToken(addressbookUri, realUsername).then(function(newSyncToken)
+            return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
             {
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Updated sync token: ${newSyncToken} for addressbook: ${addressbookUri}`);
                 if(existingVCard)
@@ -140,9 +140,9 @@ function proppatch(comm)
         }
         var props = propUpdate.set.prop;
         var addressbookUri = comm.getCalIdFromURL();
-        var realUsername = comm.getRealUsername();
+        var username = comm.getusername();
         var response = "";
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: addressbookUri} }).then(function(adb)
+        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
         {
             if(!adb)
             {
@@ -181,7 +181,7 @@ function proppatch(comm)
             {
                 if(updated)
                 {
-                    return redis.incrementAddressbookSyncToken(addressbookUri, realUsername).then(function(newSyncToken)
+                    return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
                     {
                         LSE_Logger.info(`[Fennel-NG CardDAV] Addressbook properties updated, sync token: ${newSyncToken}`);
                     });

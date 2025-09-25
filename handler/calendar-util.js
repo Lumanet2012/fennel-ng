@@ -37,8 +37,8 @@ function getCurrentUserPrivilegeSet()
 }
 function getACL(comm)
 {
-    var realUsername = comm.getRealUsername();
-    var caldavUsername = comm.getCaldavUsername();
+    var username = comm.getusername();
+    var caldav_username = comm.getcaldav_username();
     var response = "";
     var lineend = config.xml_lineend;
     response += "<d:acl>" + lineend;
@@ -82,7 +82,7 @@ function getACL(comm)
 function returnOutbox(comm)
 {
     var response = "";
-    var caldavUsername = comm.getCaldavUsername();
+    var caldav_username = comm.getcaldav_username();
     var lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
     response += "   <d:href>" + comm.getCalendarURL(null, "outbox") + "</d:href>" + lineend;
@@ -138,7 +138,7 @@ function returnOutbox(comm)
 function returnNotifications(comm)
 {
     var response = "";
-    var caldavUsername = comm.getCaldavUsername();
+    var caldav_username = comm.getcaldav_username();
     var lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
     response += "<d:href>" + comm.getCalendarURL(null, "notifications") + "</d:href>" + lineend;
