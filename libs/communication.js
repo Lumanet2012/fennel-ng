@@ -124,6 +124,14 @@ comm.prototype.getUser = function()
 {
     return this.user;
 };
+comm.prototype.getusername = function()
+{
+    return this.getAuthResult().ldap_username || this.getAuthResult().username;
+};
+comm.prototype.getcaldav_username = function()
+{
+    return this.getAuthResult().username;
+};
 comm.prototype.getAuthResult = function()
 {
     return this.authResult;

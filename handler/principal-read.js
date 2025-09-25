@@ -48,7 +48,7 @@ function propfind(comm)
                 response += "<d:principal-URL><d:href>" + comm.getPrincipalURL() + "</d:href></d:principal-URL>" + config.xml_lineend;
                 break;
             case 'displayname':
-                response += "<d:displayname>" + comm.getRealUsername() + "</d:displayname>";
+                response += "<d:displayname>" + comm.getusername() + "</d:displayname>";
                 break;
             case 'principal-collection-set':
                 response += "<d:principal-collection-set><d:href>" + comm.getFullURL("/p/") + "</d:href></d:principal-collection-set>";

@@ -12,7 +12,7 @@ function move(comm)
     comm.setStandardHeaders();
     var vcardUri = comm.getFilenameFromPath(true);
     var sourceAddressbookUri = comm.getPathElement(3);
-    var realUsername = comm.getRealUsername();
+    var username = comm.getusername();
     var destination = "";
     var req = comm.getReq();
     var headers = req.headers;
@@ -37,7 +37,7 @@ function move(comm)
     var sourceAddressbook;
     var targetAddressbook;
     var vcardToMove;
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: sourceAddressbookUri} }).then(function(sourceAdb)
+    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: sourceAddressbookUri} }).then(function(sourceAdb)
     {
         if(!sourceAdb)
         {
@@ -47,7 +47,7 @@ function move(comm)
             return Promise.reject(new Error('Source addressbook not found'));
         }
         sourceAddressbook = sourceAdb;
-        return ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + realUsername, uri: targetAddressbookUri} });
+        return ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: targetAddressbookUri} });
     }).then(function(targetAdb)
     {
         if(!targetAdb)
@@ -69,7 +69,7 @@ function move(comm)
             return Promise.reject(new Error('VCard not found'));
         }
         vcardToMove = vcard;
-        return redis.incrementAddressbookSyncToken(sourceAddressbookUri, realUsername);
+        return redis.incrementAddressbookSyncToken(sourceAddressbookUri, username);
     }).then(function(sourceSyncToken)
     {
         LSE_Logger.debug(`[Fennel-NG CardDAV] Updated source sync token: ${sourceSyncToken}`);
@@ -81,7 +81,7 @@ function move(comm)
         });
     }).then(function()
     {
-        return redis.incrementAddressbookSyncToken(targetAddressbookUri, realUsername);
+        return redis.incrementAddressbookSyncToken(targetAddressbookUri, username);
     }).then(function(targetSyncToken)
     {
         LSE_Logger.debug(`[Fennel-NG CardDAV] Updated target sync token: ${targetSyncToken}`);

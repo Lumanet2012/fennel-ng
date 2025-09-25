@@ -6,8 +6,8 @@ var CALENDARS = require('../libs/db').CALENDARS;
 function put(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.put called`);
-    var realUsername = comm.getRealUsername();
-    var principalUri = 'principals/' + realUsername;
+    var username = comm.getusername();
+    var principalUri = 'principals/' + username;
     var calendarUri = comm.getCalIdFromURL();
     var eventUri = comm.getFilenameFromPath(false);
     var calendarData = comm.getReqBody();
@@ -74,7 +74,7 @@ function put(comm)
             return savePromise.then(function(calendarObject) {
                 return updateCalendarSyncToken(calendar.id).then(function(newSyncToken) {
                     LSE_Logger.info(`[Fennel-NG CalDAV] ${isCreating ? 'Created' : 'Updated'} calendar object: ${eventUri}, sync token: ${newSyncToken}`);
-                    redis.setCalendarSyncToken(calendarUri, realUsername, newSyncToken);
+                    redis.setCalendarSyncToken(calendarUri, username, newSyncToken);
                     comm.setStandardHeaders();
                     comm.setHeader("ETag", `"${etag}"`);
                     comm.setHeader("Last-Modified", new Date(now * 1000).toUTCString());

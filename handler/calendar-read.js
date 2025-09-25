@@ -48,8 +48,8 @@ function propfind(comm)
     var xmlDoc = xml.parseXml(body);
     var node = xmlDoc.propfind;
     var childs = node && node.prop ? Object.keys(node.prop) : [];
-    var realUsername = comm.getRealUsername();
-    var caldavUsername = comm.getCaldavUsername();
+    var username = comm.getusername();
+    var caldav_username = comm.getcaldav_username();
     if(comm.getUrlElementSize() === 4)
     {
         handlePropfindForUser(comm);
@@ -118,8 +118,8 @@ function handlePropfindForCalendarNotifications(comm)
 }
 function handlePropfindForCalendarId(comm, calendarUri)
 {
-    var realUsername = comm.getRealUsername();
-    var principalUri = 'principals/' + realUsername;
+    var caldav_username = comm.getcaldav_username();
+    var principalUri = 'principals/' + caldav_username;
     CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
     {
         comm.setStandardHeaders();
@@ -131,7 +131,7 @@ function handlePropfindForCalendarId(comm, calendarUri)
             LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found: ${calendarUri}`);
             comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend);
             comm.appendResBody("<d:response>" + config.xml_lineend);
-            comm.appendResBody("<d:href>/cal/" + comm.getCaldavUsername() + "/" + calendarUri + "/</d:href>" + config.xml_lineend);
+            comm.appendResBody("<d:href>/cal/" + comm.getcaldav_username() + "/" + calendarUri + "/</d:href>" + config.xml_lineend);
             comm.appendResBody("<d:propstat>" + config.xml_lineend);
             comm.appendResBody("<d:status>HTTP/1.1 404 Not Found</d:status>" + config.xml_lineend);
             comm.appendResBody("</d:propstat>" + config.xml_lineend);
@@ -208,8 +208,8 @@ function handlePropfindForUser(comm)
         var childs = node && node.prop ? Object.keys(node.prop) : [];
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend;
         response += getCalendarRootNodeResponse(comm, childs);
-        var realUsername = comm.getRealUsername();
-        var principalUri = 'principals/' + realUsername;
+        var username = comm.getusername();
+        var principalUri = 'principals/' + username;
         CALENDARS.findAndCountAll({ where: {principaluri: principalUri}, order: [['calendarorder', 'ASC']] }).then(function(result)
         {
             for (var i=0; i < result.count; ++i)
@@ -228,8 +228,8 @@ function handlePropfindForUser(comm)
 function returnPropfindElements(comm, calendar, childs, syncToken)
 {
     var response = "";
-    var realUsername = comm.getRealUsername();
-    var caldavUsername = comm.getCaldavUsername();
+    var username = comm.getusername();
+    var caldav_username = comm.getcaldav_username();
     var len = childs.length;
     for (var i=0; i < len; ++i)
     {
@@ -289,7 +289,7 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
                 response += "<d:owner><d:href>" + comm.getPrincipalURL() + "</d:href></d:owner>" + config.xml_lineend;
                 break;
             case 'pre-publish-url':
-                response += "<cs:pre-publish-url><d:href>https://127.0.0.1/cal/" + caldavUsername + "/" + calendar.uri + "</d:href></cs:pre-publish-url>" + config.xml_lineend;
+                response += "<cs:pre-publish-url><d:href>https://127.0.0.1/cal/" + caldav_username + "/" + calendar.uri + "</d:href></cs:pre-publish-url>" + config.xml_lineend;
                 break;
             case 'publish-url':
                 response += "";
@@ -367,7 +367,7 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
 function returnCalendar(comm, calendar, childs)
 {
     var response = "";
-    var caldavUsername = comm.getCaldavUsername();
+    var caldav_username = comm.getcaldav_username();
     response += "	<d:response>" + config.xml_lineend;
     response += "		<d:href>" + comm.getCalendarURL(null, calendar.uri) + "</d:href>" + config.xml_lineend;
     response += "		<d:propstat>" + config.xml_lineend;
@@ -388,7 +388,7 @@ function returnCalendar(comm, calendar, childs)
 function getCalendarRootNodeResponse(comm, childs)
 {
     var response = "";
-    var realUsername = comm.getRealUsername();
+    var username = comm.getusername();
     response += "<d:response><d:href>" + comm.getURL() + "</d:href>" + config.xml_lineend;
     response += "<d:propstat>" + config.xml_lineend;
     response += "<d:prop>" + config.xml_lineend;
@@ -447,8 +447,8 @@ function report(comm)
 function handleReportCalendarQuery(comm, xmlDoc)
 {
     var calendarUri = comm.getCalIdFromURL();
-    var realUsername = comm.getRealUsername();
-    var principalUri = 'principals/' + realUsername;
+    var username = comm.getusername();
+    var principalUri = 'principals/' + username;
     var filter = {calendarid: null};
     CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar) {
         if (!calendar) {
@@ -533,8 +533,8 @@ function handleReportSyncCollection(comm)
     if(syncTokenNode != undefined)
     {
         var calendarUri = comm.getPathElement(3);
-        var realUsername = comm.getRealUsername();
-        var principalUri = 'principals/' + realUsername;
+        var username = comm.getusername();
+        var principalUri = 'principals/' + username;
         CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
         {
             if (!calendar) {

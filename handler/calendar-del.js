@@ -20,8 +20,8 @@ function del(comm)
     if(isRoot === true)
     {
         var calendarUri = comm.getPathElement(3);
-        var realUsername = comm.getRealUsername();
-        var principalUri = 'principals/' + realUsername;
+        var username = comm.getusername();
+        var principalUri = 'principals/' + username;
         CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
         {
             if(calendar === null)
