@@ -183,48 +183,93 @@ function handlePropfindForCalendarId(comm, calendarUri)
                 comm.flushResponse();
             });
         }
+        comm.flushResponse();
     });
 }
 function handlePropfindForUser(comm)
 {
+    LSE_Logger.debug(`[Fennel-NG CalDAV] handlePropfindForUser called - calendar discovery`);
     comm.setStandardHeaders();
     comm.setDAVHeaders();
     comm.setResponseCode(207);
     comm.appendResBody(xh.getXMLHead());
-    var response = "";
-    var xmlDoc = xml.parseXml(comm.getReqBody());
-    var nodeChecksum = xmlDoc['checksum-versions'];
-    if(nodeChecksum !== undefined)
+    var body = comm.getReqBody();
+    var xmlDoc = xml.parseXml(body);
+    var node = xmlDoc.propfind || xmlDoc['D:propfind'];
+    var propNode = node && (node.prop || node['D:prop']);
+    var requestedProps = propNode ? Object.keys(propNode) : [];
+    var username = comm.getUser().getUserName();
+    var config = require('../config').config;
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Calendar root discovery for user: ${username}`);
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Requested props: ${JSON.stringify(requestedProps)}`);
+    var caldav_username = comm.getcaldav_username();
+    var principalUri = 'principals/' + caldav_username;
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Calendar discovery for : ${principalUri}`); 
+   CALENDARS.findAndCountAll({ where: {principaluri: principalUri}, order: [['calendarorder', 'ASC']] }).then(function(result)
     {
-        response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend;
-        response += "<d:response><d:href>" + comm.getURL() + "</d:href></d:response>" + config.xml_lineend;
+        var response = "";
+        response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:A=\"http://apple.com/ns/ical/\">" + config.xml_lineend;
+        response += "<d:response>" + config.xml_lineend;
+        response += "<d:href>" + comm.getFullURL("/cal/") + "</d:href>" + config.xml_lineend;
+        response += "<d:propstat>" + config.xml_lineend;
+        response += "<d:prop>" + config.xml_lineend;
+        for (var i = 0; i < requestedProps.length; i++) {
+            var prop = requestedProps[i];
+            LSE_Logger.debug(`[Fennel-NG CalDAV] Processing property: ${prop}`);
+            switch(prop) {
+                case 'resourcetype':
+                case 'D:resourcetype':
+                    response += "<d:resourcetype><d:collection/></d:resourcetype>" + config.xml_lineend;
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] Added resourcetype property`);
+                    break;
+                case 'displayname':
+                case 'D:displayname':
+                    response += "<d:displayname>Calendar Home</d:displayname>" + config.xml_lineend;
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] Added displayname property`);
+                    break;
+                case 'current-user-principal':
+                case 'D:current-user-principal':
+                    response += "<d:current-user-principal><d:href>" + comm.getPrincipalURL() + "</d:href></d:current-user-principal>" + config.xml_lineend;
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] Added current-user-principal property`);
+                    break;
+                case 'current-user-privilege-set':
+                case 'D:current-user-privilege-set':
+                    response += calendarUtil.getCurrentUserPrivilegeSet();
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] Added current-user-privilege-set property`);
+                    break;
+                case 'owner':
+                case 'D:owner':
+                    response += "<d:owner><d:href>" + comm.getPrincipalURL() + "</d:href></d:owner>" + config.xml_lineend;
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] Added owner property`);
+                    break;
+                case 'calendar-home-set':
+                case 'C:calendar-home-set':
+                    response += "<cal:calendar-home-set><d:href>" + comm.getCalendarURL() + "</d:href></cal:calendar-home-set>" + config.xml_lineend;
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] Added calendar-home-set property`);
+                    break;
+                case 'calendar-color':
+                case 'A:calendar-color':
+                    break;
+                default:
+                    LSE_Logger.debug(`[Fennel-NG CalDAV] Property not handled: ${prop}`);
+                    break;
+            }
+        }
+        response += "</d:prop>" + config.xml_lineend;
+        response += "<d:status>HTTP/1.1 200 OK</d:status>" + config.xml_lineend;
+        response += "</d:propstat>" + config.xml_lineend;
+        response += "</d:response>" + config.xml_lineend;
+        for (var i=0; i < result.count; ++i)
+        {
+            var calendar = result.rows[i];
+            response += returnCalendar(comm, calendar, requestedProps);
+        }
+        response += calendarUtil.returnOutbox(comm);
+        response += calendarUtil.returnNotifications(comm);
         response += "</d:multistatus>" + config.xml_lineend;
         comm.appendResBody(response);
         comm.flushResponse();
-    }
-    else
-    {
-        var xmlDoc = xml.parseXml(comm.getReqBody());
-        var node = xmlDoc.propfind;
-        var childs = node && node.prop ? Object.keys(node.prop) : [];
-        response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend;
-        response += getCalendarRootNodeResponse(comm, childs);
-        var caldav_username = comm.getcaldav_username();
-        var principalUri = 'principals/' + caldav_username;
-        CALENDARS.findAndCountAll({ where: {principaluri: principalUri}, order: [['calendarorder', 'ASC']] }).then(function(result)
-        {
-            for (var i=0; i < result.count; ++i)
-            {
-                var calendar = result.rows[i];
-                response += returnCalendar(comm, calendar, childs);
-            }
-            response += calendarUtil.returnOutbox(comm);
-            response += calendarUtil.returnNotifications(comm);
-            response += "</d:multistatus>";
-            comm.appendResBody(response);
-            comm.flushResponse();
-        });
-    }
+    });
 }
 function returnPropfindElements(comm, calendar, childs, syncToken)
 {
@@ -307,18 +352,22 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
             case 'quota-used-bytes':
                 response += "";
                 break;
-            case 'resourcetype':
-                response += "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>" + config.xml_lineend;
-                break;
-            case 'displayname':
-                response += "<d:displayname>" + (calendar.displayname || "Main Calendar") + "</d:displayname>" + config.xml_lineend;
-                break;
-            case 'current-user-privilege-set':
-                response += calendarUtil.getCurrentUserPrivilegeSet();
-                break;
-            case 'calendar-color':
-                response += "<A:calendar-color xmlns:A=\"http://apple.com/ns/ical/\">" + (calendar.calendarcolor || "#0066CC") + "</A:calendar-color>" + config.xml_lineend;
-                break;
+case 'resourcetype':
+case 'D:resourcetype':
+    response += "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>" + config.xml_lineend;
+    break;
+case 'displayname':
+case 'D:displayname':
+    response += "<d:displayname>" + (calendar.displayname || "Main Calendar") + "</d:displayname>" + config.xml_lineend;
+    break;
+case 'current-user-privilege-set':
+case 'D:current-user-privilege-set':
+    response += calendarUtil.getCurrentUserPrivilegeSet();
+    break;
+case 'calendar-color':
+case 'A:calendar-color':
+    response += "<A:calendar-color xmlns:A=\"http://apple.com/ns/ical/\">" + (calendar.calendarcolor || "#0066CC") + "</A:calendar-color>" + config.xml_lineend;
+    break;
             case 'refreshrate':
                 response += "";
                 break;
