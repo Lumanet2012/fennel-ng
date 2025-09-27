@@ -172,31 +172,33 @@ function extractComponentTypeFromCalendarData(calendarData)
 }
 function extractFirstOccurrence(calendarData)
 {
-    var dtStartMatch = calendarData.match(/DTSTART[^:]*:(\d{8}T\d{6}Z?)/);
+    var dtStartMatch = calendarData.match(/DTSTART[^:]*:(\d{8}T?\d{0,6})/);
     if(dtStartMatch) {
         var dateStr = dtStartMatch[1];
         var year = parseInt(dateStr.substr(0, 4));
         var month = parseInt(dateStr.substr(4, 2)) - 1;
         var day = parseInt(dateStr.substr(6, 2));
-        var hour = parseInt(dateStr.substr(9, 2));
-        var minute = parseInt(dateStr.substr(11, 2));
-        var second = parseInt(dateStr.substr(13, 2));
-        return Math.floor(new Date(year, month, day, hour, minute, second).getTime() / 1000);
+        var hour = dateStr.length > 8 ? parseInt(dateStr.substr(9, 2)) || 0 : 0;
+        var minute = dateStr.length > 10 ? parseInt(dateStr.substr(11, 2)) || 0 : 0;
+        var second = dateStr.length > 12 ? parseInt(dateStr.substr(13, 2)) || 0 : 0;
+        var date = new Date(Date.UTC(year, month, day, hour, minute, second));
+        return Math.floor(date.getTime() / 1000);
     }
     return Math.floor(Date.now() / 1000);
 }
 function extractLastOccurrence(calendarData)
 {
-    var dtEndMatch = calendarData.match(/DTEND[^:]*:(\d{8}T\d{6}Z?)/);
+    var dtEndMatch = calendarData.match(/DTEND[^:]*:(\d{8}T?\d{0,6})/);
     if(dtEndMatch) {
         var dateStr = dtEndMatch[1];
         var year = parseInt(dateStr.substr(0, 4));
         var month = parseInt(dateStr.substr(4, 2)) - 1;
         var day = parseInt(dateStr.substr(6, 2));
-        var hour = parseInt(dateStr.substr(9, 2));
-        var minute = parseInt(dateStr.substr(11, 2));
-        var second = parseInt(dateStr.substr(13, 2));
-        return Math.floor(new Date(year, month, day, hour, minute, second).getTime() / 1000);
+        var hour = dateStr.length > 8 ? parseInt(dateStr.substr(9, 2)) || 0 : 0;
+        var minute = dateStr.length > 10 ? parseInt(dateStr.substr(11, 2)) || 0 : 0;
+        var second = dateStr.length > 12 ? parseInt(dateStr.substr(13, 2)) || 0 : 0;
+        var date = new Date(Date.UTC(year, month, day, hour, minute, second));
+        return Math.floor(date.getTime() / 1000);
     }
     return Math.floor(Date.now() / 1000) + 3600;
 }
