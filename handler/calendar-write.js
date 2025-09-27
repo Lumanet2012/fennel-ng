@@ -3,11 +3,29 @@ var xh = require("../libs/xmlhelper");
 var redis = require('../libs/redis');
 var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
 var CALENDARS = require('../libs/db').CALENDARS;
+function proppatch(comm)
+{
+    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.proppatch called`);
+    comm.setStandardHeaders();
+    comm.setResponseCode(200);
+    comm.appendResBody(xh.getXMLHead());
+    comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\">\r\n");
+    comm.appendResBody("<d:response>\r\n");
+    comm.appendResBody("<d:href>" + comm.getURL() + "</d:href>\r\n");
+    comm.appendResBody("<d:propstat>\r\n");
+    comm.appendResBody("<d:prop/>\r\n");
+    comm.appendResBody("<d:status>HTTP/1.1 403 Forbidden</d:status>\r\n");
+    comm.appendResBody("</d:propstat>\r\n");
+    comm.appendResBody("</d:response>\r\n");
+    comm.appendResBody("</d:multistatus>\r\n");
+    comm.flushResponse();
+}
 function put(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.put called`);
     var username = comm.getusername();
-    var principalUri = 'principals/' + username;
+    var caldav_username = comm.getcaldav_username();
+    var principalUri = 'principals/' + caldav_username;
     var calendarUri = comm.getCalIdFromURL();
     var eventUri = comm.getFilenameFromPath(false);
     var calendarData = comm.getReqBody();
@@ -87,6 +105,59 @@ function put(comm)
         LSE_Logger.error(`[Fennel-NG CalDAV] Error in put: ${error.message}`);
         comm.setResponseCode(500);
         comm.flushResponse();
+    });
+}
+function mkcalendar(comm)
+{
+    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.mkcalendar called`);
+    var calendarUri = comm.getCalIdFromURL();
+    var username = comm.getUser().getUserName();
+    var body = comm.getReqBody();
+    var displayname = 'New Calendar';
+    var description = 'Calendar created via MKCALENDAR';
+    if(body && body.length > 0)
+    {
+        try {
+            var xmlDoc = xml.parseXml(body);
+            var mkcalendar = xmlDoc['mkcalendar'] || xmlDoc['cal:mkcalendar'];
+            if(mkcalendar && mkcalendar.set && mkcalendar.set.prop)
+            {
+                var props = mkcalendar.set.prop;
+                if(props.displayname) {
+                    displayname = props.displayname;
+                }
+                if(props['calendar-description']) {
+                    description = props['calendar-description'];
+                }
+            }
+        } catch(error) {
+            LSE_Logger.warn(`[Fennel-NG CalDAV] Error parsing MKCALENDAR body: ${error.message}`);
+        }
+    }
+    var calendarData = {
+        principaluri: 'principals/' + username,
+        synctoken: 1,
+        components: 'VEVENT,VTODO',
+        displayname: displayname,
+        uri: calendarUri,
+        description: description,
+        calendarorder: 0,
+        calendarcolor: '#3174ad'
+    };
+    CALENDARS.create(calendarData).then(function(calendar) {
+        LSE_Logger.info(`[Fennel-NG CalDAV] Created calendar: ${calendarUri} for user: ${username}`);
+        comm.setStandardHeaders();
+        comm.setResponseCode(201);
+        comm.flushResponse();
+    }).catch(function(error) {
+        LSE_Logger.error(`[Fennel-NG CalDAV] Error creating calendar: ${error.message}`);
+        if(error.name === 'SequelizeUniqueConstraintError') {
+            comm.setResponseCode(409);
+            comm.flushResponse();
+        } else {
+            comm.setResponseCode(500);
+            comm.flushResponse();
+        }
     });
 }
 function extractUidFromCalendarData(calendarData)
