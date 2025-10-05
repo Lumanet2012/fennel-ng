@@ -3,7 +3,9 @@ const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
     textNodeName: "#text",
-    parseAttributeValue: true
+    parseAttributeValue: true,
+    ignoreDeclaration: true,
+    ignorePiTags: true
 });
 var xml = {
     parseXml: function(body) {
@@ -497,12 +499,15 @@ function report(comm)
     switch(rootName)
     {
         case 'sync-collection':
+        case 'D:sync-collection':
             handleReportSyncCollection(comm);
             break;
         case 'calendar-multiget':
+        case 'C:calendar-multiget':
             handleReportCalendarMultiget(comm);
             break;
         case 'calendar-query':
+        case 'C:calendar-query':
             handleReportCalendarQuery(comm, xmlDoc);
             break;
         default:
@@ -695,32 +700,25 @@ function handleReportCalendarMultiget(comm)
     LSE_Logger.debug(`[Fennel-NG CalDAV] handleReportCalendarMultiget`);
     var body = comm.getReqBody();
     var xmlDoc = xml.parseXml(body);
-    var hrefNodes = xmlDoc.href;
-    if(hrefNodes != undefined)
-    {
-        var arrHrefs = [];
-        if(Array.isArray(hrefNodes)) {
-            arrHrefs = hrefNodes.map(function(href) { return parseHrefToEventUri(href); });
-        } else {
-            arrHrefs.push(parseHrefToEventUri(hrefNodes));
-        }
-        var len = arrHrefs.length;
-        for (var i=0; i < len; ++i)
-        {
-            var child = arrHrefs[i];
-            switch(child)
-            {
-                case 'prop':
-                    break;
-                case 'href':
-                    arrHrefs.push(parseHrefToEventUri(child));
-                    break;
-                default:
-                    if(child != 'text') LSE_Logger.warn(`[Fennel-NG CalDAV] P-R: not handled: ${child}`);
-                    break;
+    LSE_Logger.debug(`[Fennel-NG CalDAV] Parsed XML structure: ${JSON.stringify(xmlDoc, null, 2)}`);
+    var calendarMultiget = xmlDoc['C:calendar-multiget'] || xmlDoc['calendar-multiget'] || xmlDoc.root;
+    if(calendarMultiget) {
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Found calendar-multiget: ${JSON.stringify(calendarMultiget, null, 2)}`);
+        var hrefNodes = calendarMultiget['D:href'] || calendarMultiget.href || calendarMultiget['@_href'];
+        LSE_Logger.debug(`[Fennel-NG CalDAV] Found href nodes: ${JSON.stringify(hrefNodes, null, 2)}`);
+        if(hrefNodes != undefined) {
+            var arrHrefs = [];
+            if(Array.isArray(hrefNodes)) {
+                arrHrefs = hrefNodes.map(function(href) { return parseHrefToEventUri(href); });
+            } else {
+                arrHrefs.push(parseHrefToEventUri(hrefNodes));
             }
+            handleReportHrefs(comm, arrHrefs);
+        } else {
+            LSE_Logger.warn(`[Fennel-NG CalDAV] No href nodes found in multiget request`);
         }
-        handleReportHrefs(comm, arrHrefs);
+    } else {
+        LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar-multiget element not found`);
     }
 }
 function parseHrefToEventUri(href)

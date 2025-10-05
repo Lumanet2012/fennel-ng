@@ -76,11 +76,10 @@ class LDAPIntegration {
             var searchOptions = {
                 scope: 'sub',
                 filter: searchFilter,
-                attributes: ['uid', 'cn', 'memberOf', 'mail', 'displayName', 'userPassword']
+                attributes: ['uid', 'cn', 'mail', 'displayName', 'userPassword']
             };
-            LSE_Logger.debug(`[Fennel-NG LDAP] Searching for user: ${username} in ${userBaseDN}`);
             const { searchEntries } = await client.search(userBaseDN, searchOptions);
-            if (searchEntries.length === 0) {
+            if (!searchEntries || searchEntries.length === 0) {
                 LSE_Logger.warn(`[Fennel-NG LDAP] User not found: ${username}`);
                 return {
                     success: false,
@@ -88,24 +87,22 @@ class LDAPIntegration {
                 };
             }
             var userEntry = searchEntries[0];
-            var userDN = userEntry.dn;
             var userUid = userEntry.uid;
-            LSE_Logger.debug(`[Fennel-NG LDAP] Found user: ${username} with UID: ${userUid} at DN: ${userDN}`);
+            var userDN = userEntry.dn;
+            LSE_Logger.debug(`[Fennel-NG LDAP] User found: ${userUid}, DN: ${userDN}`);
             var groupBaseDN = this.config.auth_method_ldap_group_base_dn;
-            var groupFilter = `(&(cn=${requiredGroup})(member=${userDN}))`;
-            var groupOptions = {
+            var groupSearchFilter = `(&(objectClass=groupOfNames)(cn=${requiredGroup})(member=${userDN}))`;
+            var groupSearchOptions = {
                 scope: 'sub',
-                filter: groupFilter,
+                filter: groupSearchFilter,
                 attributes: ['cn']
             };
-            LSE_Logger.debug(`[Fennel-NG LDAP] Checking group membership: ${groupFilter}`);
-            const { searchEntries: groupEntries } = await client.search(groupBaseDN, groupOptions);
-            var hasCalDAVAccess = groupEntries.length > 0;
-            if (!hasCalDAVAccess) {
-                LSE_Logger.warn(`[Fennel-NG LDAP] User ${username} not found in required group: ${requiredGroup}`);
+            const groupResult = await client.search(groupBaseDN, groupSearchOptions);
+            if (!groupResult.searchEntries || groupResult.searchEntries.length === 0) {
+                LSE_Logger.warn(`[Fennel-NG LDAP] User ${username} not in required group: ${requiredGroup}`);
                 return {
                     success: false,
-                    error: `User not authorized for CalDAV access - missing group: ${requiredGroup}`
+                    error: `User not in required group: ${requiredGroup}`
                 };
             }
             LSE_Logger.debug(`[Fennel-NG LDAP] User ${username} confirmed in group: ${requiredGroup}`);
@@ -142,33 +139,33 @@ class LDAPIntegration {
             };
         }
     }
-async verifyPassword(password, storedHash) {
-    try {
-        if (!storedHash) {
-            LSE_Logger.warn(`[Fennel-NG LDAP] No password hash provided for verification`);
+    async verifyPassword(password, storedHash) {
+        try {
+            if (!storedHash) {
+                LSE_Logger.warn(`[Fennel-NG LDAP] No password hash provided for verification`);
+                return false;
+            }
+            var hashString = Buffer.isBuffer(storedHash) ? storedHash.toString() :
+                            Array.isArray(storedHash) ? storedHash[0].toString() :
+                            storedHash.toString();
+            LSE_Logger.debug(`[Fennel-NG LDAP] Password hash type: ${typeof storedHash}, value: ${hashString}`);
+            if (hashString.startsWith('{ARGON2}')) {
+                var argon2Hash = hashString.substring(8);
+                var Argon2Auth = require('./argon2-auth');
+                var result = await Argon2Auth.verifyPassword(password, argon2Hash);
+                LSE_Logger.debug(`[Fennel-NG LDAP] Argon2 verification result: ${result}`);
+                return result;
+            }
+            else {
+                var result = (hashString === password);
+                LSE_Logger.debug(`[Fennel-NG LDAP] Cleartext verification result: ${result}`);
+                return result;
+            }
+        } catch (error) {
+            LSE_Logger.error(`[Fennel-NG LDAP] Password verification error: ${error.message}`);
             return false;
         }
-        var hashString = Buffer.isBuffer(storedHash) ? storedHash.toString() :
-                        Array.isArray(storedHash) ? storedHash[0].toString() :
-                        storedHash.toString();
-        LSE_Logger.debug(`[Fennel-NG LDAP] Password hash type: ${typeof storedHash}, value: ${hashString}`);
-        if (hashString.startsWith('{ARGON2}')) {
-            var argon2Hash = hashString.substring(8).replace(/\\\$/g, '$');
-            var Argon2Auth = require('./argon2-auth');
-            var result = await Argon2Auth.verifyPassword(password, argon2Hash);
-            LSE_Logger.debug(`[Fennel-NG LDAP] Argon2 verification result: ${result}`);
-            return result;
-        }
-        else {
-            var result = (hashString === password);
-            LSE_Logger.debug(`[Fennel-NG LDAP] Cleartext verification result: ${result}`);
-            return result;
-        }
-    } catch (error) {
-        LSE_Logger.error(`[Fennel-NG LDAP] Password verification error: ${error.message}`);
-        return false;
     }
-}
     async getUserGroups(username) {
         var client = await this.initializeClient();
         var groupBaseDN = this.config.auth_method_ldap_group_base_dn;
@@ -214,45 +211,39 @@ async verifyPassword(password, storedHash) {
             };
             try {
                 const { searchEntries } = await client.search(userBaseDN, searchOptions);
-                if (searchEntries.length > 0) {
-                    var entry = searchEntries[0];
+                if (searchEntries && searchEntries.length > 0) {
+                    var userEntry = searchEntries[0];
                     var userData = {
-                        username: entry.uid,
-                        email: entry.mail || '',
-                        displayName: entry.displayName || entry.cn
+                        username: username,
+                        uid: userEntry.uid,
+                        email: userEntry.mail || '',
+                        displayName: userEntry.displayName || username
                     };
                     return {
                         exists: true,
-                        user: userData
-                    };
-                } else {
-                    return {
-                        exists: false,
-                        user: null
+                        user: userData,
+                        fromCache: false
                     };
                 }
-            } catch (searchError) {
                 return {
                     exists: false,
+                    user: null
+                };
+            } catch (searchError) {
+                LSE_Logger.error(`[Fennel-NG LDAP] User search error: ${searchError.message}`);
+                return {
+                    exists: false,
+                    user: null,
                     error: searchError.message
                 };
             }
         } catch (error) {
+            LSE_Logger.error(`[Fennel-NG LDAP] Validation error: ${error.message}`);
             return {
                 exists: false,
+                user: null,
                 error: error.message
             };
-        }
-    }
-    async disconnect() {
-        if (this.ldapClient) {
-            try {
-                await this.ldapClient.unbind();
-            } catch (error) {
-                LSE_Logger.warn(`[Fennel-NG LDAP] Error during disconnect: ${error.message}`);
-            }
-            this.ldapClient = null;
-            LSE_Logger.debug('[Fennel-NG LDAP] Disconnected from LDAP server');
         }
     }
 }

@@ -89,7 +89,7 @@ function put(comm)
             return savepromise.then(function(calendarobject) {
                 return updatecalendarsynctoken(calendar.id).then(function(newsynctoken) {
                     LSE_Logger.info(`[Fennel-NG CalDAV] ${iscreating ? 'created' : 'updated'} calendar object: ${eventuri}, sync token: ${newsynctoken}`);
-                    redis.setcalendarsynctoken(calendaruri, username, newsynctoken);
+                    redis.setCalendarSyncToken(calendaruri, username, newsynctoken);
                     comm.setStandardHeaders();
                     comm.setHeader("ETag", `"${etag}"`);
                     comm.setHeader("Last-Modified", new Date(now * 1000).toUTCString());
