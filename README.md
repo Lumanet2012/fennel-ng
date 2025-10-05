@@ -65,8 +65,8 @@ npm install -g LSE_Logger
 var config = {
     // MySQL Database
     db_name: 'lse_cal',
-    db_uid: 'LSE-Admin', 
-    db_pwd: 'LSE-@dm1n',
+    db_uid: 'your_username', 
+    db_pwd: 'your_password',
     db_host: 'localhost',
     db_port: 3306,
     db_dialect: 'mysql',
@@ -98,16 +98,16 @@ var config = {
 -- Create database and user
 mysql -u root -p
 CREATE DATABASE lse_cal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'LSE-Admin'@'localhost' IDENTIFIED BY 'LSE-@dm1n';
-GRANT ALL PRIVILEGES ON lse_cal.* TO 'LSE-Admin'@'localhost';
+CREATE USER 'your_username'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON lse_cal.* TO 'your_username'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 
 -- Import Fennel-NG schema
-mysql -u LSE-Admin -p lse_cal < sql/fennel-mysql.sql
+mysql -u your_username -p lse_cal < sql/fennel-mysql.sql
 
 -- Verify installation
-mysql -u LSE-Admin -p lse_cal -e "SHOW TABLES;"
+mysql -u your_username -p lse_cal -e "SHOW TABLES;"
 ```
 
 ### 3. Redis Configuration
@@ -364,7 +364,7 @@ node -e "console.log(require('./config').config.jwt_secret)"
 redis-cli FLUSHDB
 
 # Check database connectivity
-mysql -u LSE-Admin -p lse_cal -e "SELECT COUNT(*) FROM calendars;"
+mysql -u your_username -p lse_cal -e "SELECT COUNT(*) FROM calendars;"
 ```
 
 ### Debug Mode
@@ -400,6 +400,7 @@ GNU Affero General Public License v3.0
 - Complete rewrite for production use
 - Redis clustering support
 - JWT authentication integration
+- Blake3 Tokens 
 - MySQL/MariaDB backend
 - LDAP group-based access control
 - Express middleware support
