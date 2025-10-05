@@ -253,7 +253,7 @@ function handleRequest(req, res, next)
     {
         LSE_Logger.debug(`[Fennel-NG DEBUG] Request body complete: ${reqBody.length} bytes`);
         LSE_Logger.debug(`[Fennel-NG DEBUG] Full request body: ${reqBody}`);
-        authlib.authenticateRequest(req).then(function(authResult)
+        authlib.authenticaterequest(req).then(function(authResult)
         {
             LSE_Logger.debug(`[Fennel-NG DEBUG] Authentication result: ${JSON.stringify(authResult)}`);
             if(!authResult.success)

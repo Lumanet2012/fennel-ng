@@ -3,6 +3,7 @@ var redis = require('./redis');
 var userLib = require('./user');
 var url = require('url');
 var pd = require('pretty-data').pd;
+var { hash } = require('blake3-wasm');
 module.exports = comm;
 function comm(req, res, reqBody, authResult)
 {
@@ -16,7 +17,7 @@ function comm(req, res, reqBody, authResult)
     if(authResult && authResult.success)
     {
         this.user = new userLib.user(authResult.username);
-        this.sessionId = this.generateSessionId();
+        this.sessionId = this.generateSessionId(authResult);
         this.initializeSession();
     }
     else
@@ -60,10 +61,45 @@ comm.prototype.createSimpleAuthority = function()
         }
     };
 };
-comm.prototype.generateSessionId = function()
+comm.prototype.generateSessionId = function(authResult)
 {
-    var crypto = require('crypto');
-    return crypto.randomBytes(32).toString('hex');
+    var authentication = require('./authentication');
+    var jwtToken = null;
+    if(authResult && authResult.method === 'jwt' && authResult.payload)
+    {
+        var token = this.req.headers.authorization;
+        if(token && token.startsWith('Bearer '))
+        {
+            jwtToken = token.substring(7);
+        }
+        else if(this.req.headers.cookie)
+        {
+            var cookies = this.req.headers.cookie.split(';');
+            for(var i = 0; i < cookies.length; i++)
+            {
+                var cookie = cookies[i].trim();
+                if(cookie.startsWith(config.jwt_cookie_name + '='))
+                {
+                    jwtToken = cookie.substring(config.jwt_cookie_name.length + 1);
+                    break;
+                }
+            }
+        }
+    }
+    if(jwtToken && authResult && authResult.ldap_username)
+    {
+        var username = authResult.ldap_username.toLowerCase().trim();
+        var sessionid = hash(username + jwtToken).toString('hex');
+        LSE_Logger.debug(`[Fennel-NG Comm] Generated deterministic session ID using BLAKE3 for user: ${username}`);
+        return sessionid;
+    }
+    else
+    {
+        var crypto = require('crypto');
+        var fallbackid = crypto.randomBytes(32).toString('hex');
+        LSE_Logger.warn(`[Fennel-NG Comm] JWT token not available, using random session ID`);
+        return fallbackid;
+    }
 };
 comm.prototype.initializeSession = function()
 {
@@ -71,17 +107,18 @@ comm.prototype.initializeSession = function()
     {
         return;
     }
-    var sessionData = {
+    var sessiondata = {
         username: this.authResult.username,
-        authMethod: this.authResult.method,
-        createdAt: Math.floor(Date.now() / 1000),
-        lastActivity: Math.floor(Date.now() / 1000),
-        userAgent: this.req.headers['user-agent'] || 'Unknown',
-        remoteAddress: this.req.connection.remoteAddress || this.req.socket.remoteAddress
+        authmethod: this.authResult.method,
+        createdat: Math.floor(Date.now() / 1000),
+        lastactivity: Math.floor(Date.now() / 1000),
+        useragent: this.req.headers['user-agent'] || 'Unknown',
+        remoteaddress: this.req.connection.remoteAddress || this.req.socket.remoteAddress
     };
     if(this.sessionId)
     {
-        redis.setSessionData(this.sessionId, sessionData).catch(function(err) {
+        LSE_Logger.debug(`[Fennel-NG Comm] Storing session data for session ID: ${this.sessionId}`);
+        redis.setSessionData(this.sessionId, sessiondata).catch(function(err) {
             LSE_Logger.error(`[Fennel-NG Redis] Failed to store session: ${err.message}`);
         });
     }
@@ -146,15 +183,15 @@ comm.prototype.getAuthority = function()
 };
 comm.prototype.checkPermission = function(strURL, strMethod)
 {
-    var cleanURL = strURL;
-    if(this.routePrefix && cleanURL.startsWith(this.routePrefix))
+    var cleanurl = strURL;
+    if(this.routePrefix && cleanurl.startsWith(this.routePrefix))
     {
-        cleanURL = cleanURL.substring(this.routePrefix.length);
+        cleanurl = cleanurl.substring(this.routePrefix.length);
     }
-    var urlParts = cleanURL.substr(1).split("/").filter(String);
-    var permissionString = urlParts.join(":") + ":" + strMethod.toLowerCase();
-    LSE_Logger.debug(`[Fennel-NG Comm] URL: '${strURL}' -> clean: '${cleanURL}' -> parts: ${JSON.stringify(urlParts)} -> permission: '${permissionString}'`);
-    var ret = this.authority.check(permissionString);
+    var urlparts = cleanurl.substr(1).split("/").filter(String);
+    var permissionstring = urlparts.join(":") + ":" + strMethod.toLowerCase();
+    LSE_Logger.debug(`[Fennel-NG Comm] URL: '${strURL}' -> clean: '${cleanurl}' -> parts: ${JSON.stringify(urlparts)} -> permission: '${permissionstring}'`);
+    var ret = this.authority.check(permissionstring);
     LSE_Logger.debug(`[Fennel-NG Comm] Permission result for user '${this.getUser().getUserName()}': ${ret}`);
     return ret;
 };
@@ -199,86 +236,86 @@ comm.prototype.getPrincipalURL = function(username)
     }
     return this.getFullURL(`/p/${username}/`);
 };
-comm.prototype.getCalendarURL = function(username, calendarUri)
+comm.prototype.getCalendarURL = function(username, calendaruri)
 {
     if(!username) {
         username = this.getUser().getUserName();
     }
-    if(calendarUri) {
-        return this.getFullURL(`/cal/${username}/${calendarUri}/`);
+    if(calendaruri) {
+        return this.getFullURL(`/cal/${username}/${calendaruri}/`);
     } else {
         return this.getFullURL(`/cal/${username}/`);
     }
 };
-comm.prototype.getCardURL = function(username, addressbookUri)
+comm.prototype.getCardURL = function(username, addressbookuri)
 {
     if(!username) {
         username = this.getUser().getUserName();
     }
-    if(addressbookUri) {
-        return this.getFullURL(`/card/${username}/${addressbookUri}/`);
+    if(addressbookuri) {
+        return this.getFullURL(`/card/${username}/${addressbookuri}/`);
     } else {
         return this.getFullURL(`/card/${username}/`);
     }
 };
 comm.prototype.getURLAsArray = function()
 {
-    var cleanURL = this.req.url;
-    if(this.routePrefix && cleanURL.startsWith(this.routePrefix))
+    var cleanurl = this.req.url;
+    if(this.routePrefix && cleanurl.startsWith(this.routePrefix))
     {
-        cleanURL = cleanURL.substring(this.routePrefix.length);
+        cleanurl = cleanurl.substring(this.routePrefix.length);
     }
-    var aUrl = url.parse(cleanURL).pathname.split("/");
-    if(aUrl.length <= 0)
+    var aurl = url.parse(cleanurl).pathname.split("/");
+    if(aurl.length <= 0)
     {
         LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in comm.getUrlAsArray!`);
         return undefined;
     }
-    return aUrl;
+    return aurl;
 };
-comm.prototype.getFilenameFromPath = function(removeEnding)
+comm.prototype.getFilenameFromPath = function(removeending)
 {
-    var aUrl = this.getURLAsArray();
-    if(aUrl.length <= 0)
+    var aurl = this.getURLAsArray();
+    if(aurl.length <= 0)
     {
         LSE_Logger.warn(`[Fennel-NG Comm] Something evil happened in request.getFilenameFromPath`);
         return undefined;
     }
-    var filename = aUrl[aUrl.length - 1];
-    if(removeEnding)
+    var filename = aurl[aurl.length - 1];
+    if(removeending)
     {
-        var lastDotIndex = filename.lastIndexOf('.');
-        if(lastDotIndex !== -1)
+        var lastdotindex = filename.lastIndexOf('.');
+        if(lastdotindex !== -1)
         {
-            filename = filename.substring(0, lastDotIndex);
+            filename = filename.substring(0, lastdotindex);
         }
     }
     return filename;
 };
 comm.prototype.getCalIdFromURL = function()
 {
-    var aUrl = this.getURLAsArray();
-    if(aUrl.length > 3)
+    var aurl = this.getURLAsArray();
+    if(aurl.length > 3)
     {
-        return aUrl[3];
+        return aurl[3];
     }
     return undefined;
 };
 comm.prototype.getUrlElementSize = function()
 {
-    var aUrl = this.getURLAsArray();
-    return aUrl.length;
+    var aurl = this.getURLAsArray();
+    return aurl.length;
 };
-comm.prototype.getHeader = function(headerName)
+comm.prototype.getHeader = function(headername)
 {
-    return this.req.headers[headerName.toLowerCase()];
+    return this.req.headers[headername.toLowerCase()];
 };
 comm.prototype.getPathElement = function(index)
 {
-    var aUrl = this.getURLAsArray();
-    if(aUrl && aUrl.length > index)
+    var aurl = this.getURLAsArray();
+    if(aurl && aurl.length > index)
     {
-        return aUrl[index];
+        return aurl[index];
     }
     return undefined;
 };
