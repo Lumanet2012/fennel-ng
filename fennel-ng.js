@@ -253,7 +253,7 @@ function handleRequest(req, res, next)
     {
         LSE_Logger.debug(`[Fennel-NG DEBUG] Request body complete: ${reqBody.length} bytes`);
         LSE_Logger.debug(`[Fennel-NG DEBUG] Full request body: ${reqBody}`);
-        authlib.authenticaterequest(req).then(function(authResult)
+        authlib.authenticateRequest(req).then(function(authResult)
         {
             LSE_Logger.debug(`[Fennel-NG DEBUG] Authentication result: ${JSON.stringify(authResult)}`);
             if(!authResult.success)
@@ -367,6 +367,32 @@ function createExpressMiddleware() {
         var prefix = config.public_route_prefix || '';
         var isFennelPath = prefix && originalUrl.startsWith(prefix);
         if (isFennelPath) {
+            const allowedOrigins = [
+                'https://marketing.lumanet.info',
+                'https://atl-webcal01.lumanet.info',
+                'http://localhost:3000'
+            ];
+            const origin = req.headers.origin;
+            const isAllowedOrigin = allowedOrigins.includes(origin);
+            const originalWriteHead = res.writeHead;
+            res.writeHead = function(statusCode, headers) {
+                if (isAllowedOrigin) {
+                    const corsHeaders = {
+                        'Access-Control-Allow-Origin': origin,
+                        'Access-Control-Allow-Credentials': 'true',
+                        'Access-Control-Expose-Headers': 'ETag, DAV, Preference-Applied'
+                    };
+                    const mergedHeaders = Object.assign({}, corsHeaders, headers || {});
+                    originalWriteHead.call(this, statusCode, mergedHeaders);
+                } else {
+                    originalWriteHead.call(this, statusCode, headers);
+                }
+            };
+            if (req.method === 'OPTIONS') {
+                res.writeHead(204);
+                res.end();
+                return;
+            }
             LSE_Logger.debug(`[Fennel-NG] Handling CalDAV/CardDAV request: ${originalUrl}`);
             handleRequest(req, res, next);
         } else {

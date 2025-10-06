@@ -137,7 +137,7 @@ function handlePropfindForCalendarId(comm, calendarUri)
             LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found: ${calendarUri}`);
             comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend);
             comm.appendResBody("<d:response>" + config.xml_lineend);
-            comm.appendResBody("<d:href>/cal/" + comm.getcaldav_username() + "/" + calendarUri + "/</d:href>" + config.xml_lineend);
+            comm.appendResBody("<d:href>" + calendarUri + "/</d:href>" + config.xml_lineend);
             comm.appendResBody("<d:propstat>" + config.xml_lineend);
             comm.appendResBody("<d:status>HTTP/1.1 404 Not Found</d:status>" + config.xml_lineend);
             comm.appendResBody("</d:propstat>" + config.xml_lineend);
@@ -220,7 +220,8 @@ function handlePropfindForUser(comm)
         var response = "";
         response += "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:A=\"http://apple.com/ns/ical/\">" + config.xml_lineend;
         response += "<d:response>" + config.xml_lineend;
-        response += "<d:href>" + comm.getFullURL("/cal/") + "</d:href>" + config.xml_lineend;
+//        response += "<d:href>" + comm.getFullURL("/cal/") + "</d:href>" + config.xml_lineend;
+        response += "<d:href>" + comm.getFullURL(comm.getURL()) + "</d:href>" + config.xml_lineend;
         response += "<d:propstat>" + config.xml_lineend;
         response += "<d:prop>" + config.xml_lineend;
         for (var i = 0; i < requestedProps.length; i++) {
@@ -363,22 +364,22 @@ function returnPropfindElements(comm, calendar, childs, syncToken)
             case 'quota-used-bytes':
                 response += "";
                 break;
-case 'resourcetype':
-case 'D:resourcetype':
-    response += "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>" + config.xml_lineend;
-    break;
-case 'displayname':
-case 'D:displayname':
-    response += "<d:displayname>" + (calendar.displayname || "Main Calendar") + "</d:displayname>" + config.xml_lineend;
-    break;
-case 'current-user-privilege-set':
-case 'D:current-user-privilege-set':
-    response += calendarUtil.getCurrentUserPrivilegeSet();
-    break;
-case 'calendar-color':
-case 'A:calendar-color':
-    response += "<A:calendar-color xmlns:A=\"http://apple.com/ns/ical/\">" + (calendar.calendarcolor || "#0066CC") + "</A:calendar-color>" + config.xml_lineend;
-    break;
+            case 'resourcetype':
+            case 'D:resourcetype':
+                response += "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>" + config.xml_lineend;
+                break;
+            case 'displayname':
+            case 'D:displayname':
+               response += "<d:displayname>" + (calendar.displayname || "Main Calendar") + "</d:displayname>" + config.xml_lineend;
+               break;
+            case 'current-user-privilege-set':
+            case 'D:current-user-privilege-set':
+                response += calendarUtil.getCurrentUserPrivilegeSet();
+                break;
+            case 'calendar-color':
+            case 'A:calendar-color':
+                response += "<A:calendar-color xmlns:A=\"http://apple.com/ns/ical/\">" + (calendar.calendarcolor || "#0066CC") + "</A:calendar-color>" + config.xml_lineend;
+                break;
             case 'refreshrate':
                 response += "";
                 break;
@@ -442,7 +443,7 @@ function returnCalendar(comm, calendar, childs)
     LSE_Logger.debug(`[Fennel-NG CalDAV] returnCalendar`);
     var response = "";
     response += "<d:response>" + config.xml_lineend;
-    response += "<d:href>" + comm.getCalendarURL(null, calendar.uri) + "</d:href>" + config.xml_lineend;
+    response += "<d:href>" + calendar.uri + "/</d:href>" + config.xml_lineend;
     response += "<d:propstat>" + config.xml_lineend;
     response += "<d:prop>" + config.xml_lineend;
     response += returnPropfindElements(comm, calendar, childs, calendar.synctoken);
@@ -457,6 +458,7 @@ function getCalendarRootNodeResponse(comm, childs)
     LSE_Logger.debug(`[Fennel-NG CalDAV] getCalendarRootNodeResponse`);
     var response = "";
     var username = comm.getusername();
+    var caldav_username = comm.getcaldav_username();
     response += "<d:response><d:href>" + comm.getURL() + "</d:href>" + config.xml_lineend;
     response += "<d:propstat>" + config.xml_lineend;
     response += "<d:prop>" + config.xml_lineend;

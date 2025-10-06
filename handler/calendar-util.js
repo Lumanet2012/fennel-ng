@@ -85,7 +85,7 @@ function returnOutbox(comm)
     var caldav_username = comm.getcaldav_username();
     var lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
-    response += "   <d:href>" + comm.getCalendarURL(null, "outbox") + "</d:href>" + lineend;
+    response += "   <d:href>outbox/</d:href>" + lineend;
     response += "    <d:propstat>" + lineend;
     response += "        <d:prop>" + lineend;
     response += "            <d:current-user-privilege-set>" + lineend;
@@ -141,7 +141,7 @@ function returnNotifications(comm)
     var caldav_username = comm.getcaldav_username();
     var lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
-    response += "<d:href>" + comm.getCalendarURL(null, "notifications") + "</d:href>" + lineend;
+    response += "<d:href>notifications/</d:href>" + lineend;
     response += "<d:propstat>" + lineend;
     response += "    <d:prop>" + lineend;
     response += "        <d:current-user-privilege-set>" + lineend;

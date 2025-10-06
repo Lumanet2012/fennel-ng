@@ -5,25 +5,25 @@ var jwt = require('jsonwebtoken');
 var fs = require('fs');
 var path = require('path');
 var { hash } = require('blake3-wasm');
-function checklogin(basicauth, username, password, callback)
+function checkLogin(basicauth, username, password, callback)
 {
     LSE_Logger.debug(`[Fennel-NG Auth] Login process started for user: ${username}`);
     switch(config.auth_method)
     {
         case 'ldap':
-            checkldap(username, password, callback);
+            checkLDAP(username, password, callback);
             break;
         case 'ldap_jwt':
-            checkldap(username, password, callback);
+            checkLDAP(username, password, callback);
             break;
         case 'jwt':
             callback(false);
             break;
         case 'htaccess':
-            checkhtaccess(basicauth, username, password, callback);
+            checkHtaccess(basicauth, username, password, callback);
             break;
         case 'courier':
-            checkcourier(username, password, callback);
+            checkCourier(username, password, callback);
             break;
         default:
             LSE_Logger.warn(`[Fennel-NG Auth] No authentication method defined: ${config.auth_method}`);
@@ -31,7 +31,7 @@ function checklogin(basicauth, username, password, callback)
             break;
     }
 }
-async function checkldap(username, password, callback)
+async function checkLDAP(username, password, callback)
 {
     LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with LDAP method: ${username}`);
     try
@@ -122,7 +122,7 @@ async function checkldap(username, password, callback)
         callback(false);
     }
 }
-async function validatejwttoken(token)
+async function validateJWTToken(token)
 {
     try
     {
@@ -187,7 +187,7 @@ async function validatejwttoken(token)
         };
     }
 }
-async function extractjwtfromrequest(req)
+async function extractJWTFromRequest(req)
 {
     try
     {
@@ -223,14 +223,14 @@ async function extractjwtfromrequest(req)
         return null;
     }
 }
-async function authenticaterequest(req)
+async function authenticateRequest(req)
 {
     try
     {
-        var jwttoken = await extractjwtfromrequest(req);
+        var jwttoken = await extractJWTFromRequest(req);
         if(jwttoken)
         {
-            var jwtresult = await validatejwttoken(jwttoken);
+            var jwtresult = await validateJWTToken(jwttoken);
             if(jwtresult.valid)
             {
                 var username = jwtresult.payload.username || jwtresult.payload.sub;
@@ -258,7 +258,7 @@ async function authenticaterequest(req)
             if(username && password)
             {
                 return new Promise((resolve) => {
-                    checklogin(null, username, password, function(success) {
+                    checkLogin(null, username, password, function(success) {
                         if(success)
                         {
                             LSE_Logger.debug(`[Fennel-NG Auth] Request authenticated via Basic Auth for user: ${username}`);
@@ -296,7 +296,7 @@ async function authenticaterequest(req)
         };
     }
 }
-async function blacklistjwttoken(token)
+async function blacklistJWTToken(token)
 {
     try
     {
@@ -312,7 +312,7 @@ async function blacklistjwttoken(token)
         return false;
     }
 }
-function checkhtaccess(basicauth, username, password, callback)
+function checkHtaccess(basicauth, username, password, callback)
 {
     LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with htaccess method: ${username}`);
     var fhtaccess = path.resolve('.', config.auth_method_htaccess_file);
@@ -329,7 +329,7 @@ function checkhtaccess(basicauth, username, password, callback)
         var line = lines[i];
         if(line.length > 0)
         {
-            var ret = processline(line);
+            var ret = processLine(line);
             if(ret.username == username)
             {
                 if(basicauth.validate(ret.passwordhash, password))
@@ -344,20 +344,20 @@ function checkhtaccess(basicauth, username, password, callback)
     LSE_Logger.warn(`[Fennel-NG Auth] Htaccess authentication failed for user: ${username}`);
     callback(false);
 }
-function processline(line)
+function processLine(line)
 {
     var pwdhash, linesplit, username;
     linesplit = line.split(":");
     username = linesplit.shift();
     pwdhash = linesplit.join(":");
-    return new htaccessline(username, pwdhash);
+                return new htaccessLine(username, pwdhash);
 }
-function htaccessline(user, hash)
+function htaccessLine(user, hash)
 {
     this.username = user;
     this.passwordhash = hash;
 }
-function checkcourier(username, password, callback)
+function checkCourier(username, password, callback)
 {
     LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with courier method: ${username}`);
     var fcourier = path.resolve('.', config.auth_method_courier_socket);
@@ -395,12 +395,12 @@ function checkcourier(username, password, callback)
     });
 }
 module.exports = {
-    checklogin: checklogin,
-    checkldap: checkldap,
-    validatejwttoken: validatejwttoken,
-    extractjwtfromrequest: extractjwtfromrequest,
-    authenticaterequest: authenticaterequest,
-    blacklistjwttoken: blacklistjwttoken,
-    checkhtaccess: checkhtaccess,
-    checkcourier: checkcourier
+    checkLogin: checkLogin,
+    checkLDAP: checkLDAP,
+    validateJWTToken: validateJWTToken,
+    extractJWTFromRequest: extractJWTFromRequest,
+    authenticateRequest: authenticateRequest,
+    blacklistJWTToken: blacklistJWTToken,
+    checkHtaccess: checkHtaccess,
+    checkCourier: checkCourier
 };
