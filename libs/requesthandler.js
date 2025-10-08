@@ -31,7 +31,7 @@ function handleCalendar(request)
 {
     var method = request.getReq().method;
     var urlElements = request.getUrlElementSize();
-    if(urlElements === 5)
+    if(urlElements === 4)
     {
         cal.handleRoot(request);
     }
