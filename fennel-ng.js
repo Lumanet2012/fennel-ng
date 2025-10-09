@@ -1,13 +1,13 @@
-var config = require('./config').config;
-var authlib = require('./libs/authentication');
-var handler = require('./libs/requesthandler');
-var communication = require('./libs/communication');
-var redis = require('./libs/redis');
-var db = require('./libs/db');
-var httpauth = require('http-auth');
-var crossroads = require('crossroads');
+const config = require('./config').config;
+const authlib = require('./libs/authentication');
+const handler = require('./libs/requesthandler');
+const comm = require('./libs/communication');
+const redis = require('./libs/redis');
+const db = require('./libs/db');
+const httpauth = require('http-auth');
+const crossroads = require('crossroads');
 crossroads.ignoreState = true;
-var basic = httpauth.basic(
+const basic = httpauth.basic(
     {
         realm: "Fennel-NG CalDAV/CardDAV"
     }, function (username, password, callback)
@@ -289,10 +289,11 @@ function handleRequest(req, res, next)
                     socket: req.socket,
                     originalUrl: req.originalUrl
                 };
-                var comm = new communication(tempReq, res, reqBody, authResult);
+                const commobj = new comm(tempReq, res, reqBody, authResult);
+                commobj.processRequest();
                 LSE_Logger.debug(`[Fennel-NG DEBUG] Communication object created for user: ${authResult.username}`);
                 LSE_Logger.debug(`[Fennel-NG DEBUG] Parsing URL with crossroads: ${originalUrl}`);
-                crossroads.parse(originalUrl, [comm]);
+                crossroads.parse(originalUrl, [commobj]);
                 LSE_Logger.debug(`[Fennel-NG DEBUG] Crossroads parsing completed`);
             }
             catch(error)
