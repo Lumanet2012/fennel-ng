@@ -290,7 +290,7 @@ function handleRequest(req, res, next)
                     originalUrl: req.originalUrl
                 };
                 const commobj = new comm(tempReq, res, reqBody, authResult);
-                commobj.processRequest();
+                commobj.processrequest();
                 LSE_Logger.debug(`[Fennel-NG DEBUG] Communication object created for user: ${authResult.username}`);
                 LSE_Logger.debug(`[Fennel-NG DEBUG] Parsing URL with crossroads: ${originalUrl}`);
                 crossroads.parse(originalUrl, [commobj]);
