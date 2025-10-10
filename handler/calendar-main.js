@@ -1,109 +1,105 @@
-const { XMLParser } = require('fast-xml-parser');
-const parser = new XMLParser({ 
-    ignoreAttributes: false,
-    attributeNamePrefix: "@_",
-    textNodeName: "#text",
-    parseAttributeValue: true
-});
-var xml = {
-    parseXml: function(body) {
-        return parser.parse(body);
+const {XMLParser}=require('fast-xml-parser');
+const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true});
+const xml={parsexml:function(body){return parser.parse(body);}};
+const config=require('../config').config;
+const xh=require("../libs/xmlhelper");
+const redis=require('../libs/redis');
+const calendarobjects=require('../libs/db').CALENDAROBJECTS;
+const calendars=require('../libs/db').CALENDARS;
+const calendarutil=require('./calendar-util');
+const calendarread=require('./calendar-read');
+const calendarwrite=require('./calendar-write');
+const calendardel=require('./calendar-del');
+const calendarmove=require('./calendar-move');
+function handleroot(comm){
+    if(config.LSE_Loglevel>=2){
+        LSE_Logger.debug(`[Fennel-NG CalDAV] handleRoot`);
     }
-};
-var config = require('../config').config;
-var xh = require("../libs/xmlhelper");
-var redis = require('../libs/redis');
-var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
-var CALENDARS = require('../libs/db').CALENDARS;
-var calendarUtil = require('./calendar-util');
-var calendarRead = require('./calendar-read');
-var calendarWrite = require('./calendar-write');
-var calendarDel = require('./calendar-del');
-var calendarMove = require('./calendar-move');
-function handleRoot(comm)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] handleRoot`);
-    var method = comm.getReq().method;
-    switch(method)
-    {
+    const method=comm.getreq().method;
+    switch(method){
         case 'PROPFIND':
-            calendarRead.propfind(comm);
+            calendarread.propfind(comm);
             break;
         case 'PROPPATCH':
-            calendarWrite.proppatch(comm);
+            calendarwrite.proppatch(comm);
             break;
         case 'OPTIONS':
             options(comm);
             break;
         case 'REPORT':
-            calendarRead.report(comm);
+            calendarread.report(comm);
             break;
         case 'MKCALENDAR':
-            calendarWrite.mkcalendar(comm);
+            calendarwrite.mkcalendar(comm);
             break;
         default:
-            var res = comm.getRes();
-            LSE_Logger.info(`[Fennel-NG CalDAV] Request method is unknown: ${method}`);
+            const res=comm.getres();
+            if(config.LSE_Loglevel>=1){
+                LSE_Logger.info(`[Fennel-NG CalDAV] Request method is unknown: ${method}`);
+            }
             res.writeHead(500);
-            res.write(method + " is not implemented yet");
+            res.write(method+" is not implemented yet");
             res.end();
             break;
     }
 }
-function handleCalendar(comm)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] handleCalendar`);
-    var method = comm.getReq().method;
-    switch(method)
-    {
+function handlecalendar(comm){
+    if(config.LSE_Loglevel>=2){
+        LSE_Logger.debug(`[Fennel-NG CalDAV] handleCalendar`);
+    }
+    const method=comm.getreq().method;
+    switch(method){
         case 'PROPFIND':
-            calendarRead.propfind(comm);
+            calendarread.propfind(comm);
             break;
         case 'PROPPATCH':
-            calendarWrite.proppatch(comm);
+            calendarwrite.proppatch(comm);
             break;
         case 'OPTIONS':
             options(comm);
             break;
         case 'REPORT':
-            calendarRead.report(comm);
+            calendarread.report(comm);
             break;
         case 'PUT':
-            calendarWrite.put(comm);
+            calendarwrite.put(comm);
             break;
         case 'GET':
-            calendarRead.gett(comm);
+            calendarread.gett(comm);
             break;
         case 'DELETE':
-            calendarDel.del(comm);
+            calendardel.del(comm);
             break;
         case 'MOVE':
-            calendarMove.move(comm);
+            calendarmove.move(comm);
             break;
         case 'MKCALENDAR':
-            calendarWrite.mkcalendar(comm);
+            calendarwrite.mkcalendar(comm);
             break;
         default:
-            var res = comm.getRes();
-            LSE_Logger.info(`[Fennel-NG CalDAV] Request method is unknown: ${method}`);
+            const res=comm.getres();
+            if(config.LSE_Loglevel>=1){
+                LSE_Logger.info(`[Fennel-NG CalDAV] Request method is unknown: ${method}`);
+            }
             res.writeHead(500);
-            res.write(method + " is not implemented yet");
+            res.write(method+" is not implemented yet");
             res.end();
             break;
     }
 }
-function options(comm)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.options called`);
-    comm.setHeader("Content-Type", "text/html");
-    comm.setHeader("Server", "Fennel-NG");
-    comm.setHeader("DAV", "1, 2, 3, calendar-access, calendar-schedule");
-    comm.setHeader("Allow", "OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST, COPY, MOVE, MKCALENDAR");
-    comm.setResponseCode(200);
-    comm.flushResponse();
+function options(comm){
+    if(config.LSE_Loglevel>=2){
+        LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.options called`);
+    }
+    comm.setheader("Content-Type","text/html");
+    comm.setheader("Server","Fennel-NG");
+    comm.setheader("DAV","1, 2, 3, calendar-access, calendar-schedule");
+    comm.setheader("Allow","OPTIONS, PROPFIND, HEAD, GET, REPORT, PROPPATCH, PUT, DELETE, POST, COPY, MOVE, MKCALENDAR");
+    comm.setresponsecode(200);
+    comm.flushresponse();
 }
-module.exports = {
-    handleRoot: handleRoot,
-    handleCalendar: handleCalendar
+module.exports={
+    handleroot:handleroot,
+    handlecalendar:handlecalendar
 };
 

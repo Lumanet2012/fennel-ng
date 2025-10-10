@@ -1,67 +1,67 @@
-function serializeproperty(name, value, parameters)
-{
-    var line = name;
+const config = require('../config').config;
+function serializeproperty(name, value, parameters) {
+    const line = name;
+    let result = line;
     if(parameters) {
-        for(var paramname in parameters) {
-            var paramvalue = parameters[paramname];
+        for(const paramname in parameters) {
+            let paramvalue = parameters[paramname];
             if(Array.isArray(paramvalue)) {
                 paramvalue = paramvalue.join(',');
             }
             if(paramvalue.indexOf(':') !== -1 || paramvalue.indexOf(';') !== -1 || paramvalue.indexOf(',') !== -1) {
                 paramvalue = '"' + paramvalue + '"';
             }
-            line += ';' + paramname + '=' + paramvalue;
+            result += ';' + paramname + '=' + paramvalue;
         }
     }
-    line += ':' + value;
-    return line;
+    result += ':' + value;
+    return result;
 }
-function foldline(line)
-{
+function foldline(line) {
     if(line.length <= 75) {
         return line;
     }
-    var foldedlines = [];
-    var pos = 0;
+    const foldedlines = [];
+    let pos = 0;
     while(pos < line.length) {
         if(pos === 0) {
             foldedlines.push(line.substring(0, 75));
             pos = 75;
         } else {
-            var maxlength = 74;
-            var endpos = Math.min(pos + maxlength, line.length);
+            const maxlength = 74;
+            const endpos = Math.min(pos + maxlength, line.length);
             foldedlines.push(' ' + line.substring(pos, endpos));
             pos = endpos;
         }
     }
     return foldedlines.join('\r\n');
 }
-function serializecomponent(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] serializecomponent called for type: ${component.type}`);
-    var lines = [];
+function serializecomponent(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG CalDAV] serializecomponent called for type: ${component.type}`);
+    }
+    const lines = [];
     lines.push('BEGIN:' + component.type);
     if(component.properties) {
-        for(var propname in component.properties) {
-            var props = component.properties[propname];
-            for(var i = 0; i < props.length; i++) {
-                var prop = props[i];
-                var serializedprop = serializeproperty(propname, prop.value, prop.parameters);
+        for(const propname in component.properties) {
+            const props = component.properties[propname];
+            for(let i = 0; i < props.length; i++) {
+                const prop = props[i];
+                const serializedprop = serializeproperty(propname, prop.value, prop.parameters);
                 lines.push(foldline(serializedprop));
             }
         }
     }
     if(component.components) {
-        for(var i = 0; i < component.components.length; i++) {
-            var subcomponent = serializecomponent(component.components[i]);
+        for(let i = 0; i < component.components.length; i++) {
+            const subcomponent = serializecomponent(component.components[i]);
             lines.push(subcomponent);
         }
     }
     lines.push('END:' + component.type);
     return lines.join('\r\n');
 }
-function createvcalendar()
-{
+function createvcalendar() {
     return {
         type: 'VCALENDAR',
         properties: {
@@ -77,15 +77,13 @@ function createvcalendar()
         components: []
     };
 }
-function addcomponent(vcalendar, component)
-{
+function addcomponent(vcalendar, component) {
     if(!vcalendar.components) {
         vcalendar.components = [];
     }
     vcalendar.components.push(component);
 }
-function addproperty(component, name, value, parameters)
-{
+function addproperty(component, name, value, parameters) {
     if(!component.properties) {
         component.properties = {};
     }
@@ -97,9 +95,8 @@ function addproperty(component, name, value, parameters)
         parameters: parameters || {}
     });
 }
-function createvevent(uid, summary, dtstart, dtend)
-{
-    var vevent = {
+function createvevent(uid, summary, dtstart, dtend) {
+    const vevent = {
         type: 'VEVENT',
         properties: {},
         components: []
@@ -111,9 +108,8 @@ function createvevent(uid, summary, dtstart, dtend)
     addproperty(vevent, 'DTSTAMP', formatdatetimeutc(new Date()));
     return vevent;
 }
-function createvtodo(uid, summary, due)
-{
-    var vtodo = {
+function createvtodo(uid, summary, due) {
+    const vtodo = {
         type: 'VTODO',
         properties: {},
         components: []
@@ -126,9 +122,8 @@ function createvtodo(uid, summary, due)
     addproperty(vtodo, 'DTSTAMP', formatdatetimeutc(new Date()));
     return vtodo;
 }
-function createvtimezone(tzid)
-{
-    var vtimezone = {
+function createvtimezone(tzid) {
+    const vtimezone = {
         type: 'VTIMEZONE',
         properties: {},
         components: []
@@ -136,9 +131,8 @@ function createvtimezone(tzid)
     addproperty(vtimezone, 'TZID', tzid);
     return vtimezone;
 }
-function createvalarm(action, description, trigger)
-{
-    var valarm = {
+function createvalarm(action, description, trigger) {
+    const valarm = {
         type: 'VALARM',
         properties: {},
         components: []
@@ -148,28 +142,29 @@ function createvalarm(action, description, trigger)
     addproperty(valarm, 'TRIGGER', trigger);
     return valarm;
 }
-function formatdatetimeutc(date)
-{
-    var year = date.getUTCFullYear().toString().padStart(4, '0');
-    var month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-    var day = date.getUTCDate().toString().padStart(2, '0');
-    var hour = date.getUTCHours().toString().padStart(2, '0');
-    var minute = date.getUTCMinutes().toString().padStart(2, '0');
-    var second = date.getUTCSeconds().toString().padStart(2, '0');
+function formatdatetimeutc(date) {
+    const year = date.getUTCFullYear().toString().padStart(4, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const hour = date.getUTCHours().toString().padStart(2, '0');
+    const minute = date.getUTCMinutes().toString().padStart(2, '0');
+    const second = date.getUTCSeconds().toString().padStart(2, '0');
     return year + month + day + 'T' + hour + minute + second + 'Z';
 }
-function formatdateonly(date)
-{
-    var year = date.getFullYear().toString().padStart(4, '0');
-    var month = (date.getMonth() + 1).toString().padStart(2, '0');
-    var day = date.getDate().toString().padStart(2, '0');
+function formatdateonly(date) {
+    const year = date.getFullYear().toString().padStart(4, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
     return year + month + day;
 }
-function serializeics(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] serializeics starting`);
-    var icsdata = serializecomponent(component);
-    LSE_Logger.debug(`[Fennel-NG CalDAV] serializeics completed, generated ${icsdata.length} bytes`);
+function serializeics(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG CalDAV] serializeics starting`);
+    }
+    const icsdata = serializecomponent(component);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG CalDAV] serializeics completed, generated ${icsdata.length} bytes`);
+    }
     return icsdata;
 }
 module.exports = {

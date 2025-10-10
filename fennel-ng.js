@@ -40,7 +40,7 @@ function initializefennelng()
         if(config.LSE_Loglevel >= 1) {
             LSE_Logger.info('[Fennel-NG] Database schema synchronized');
         }
-        setupRoutes();
+        setuproutes();
         if(config.LSE_Loglevel >= 1) {
             LSE_Logger.info('[Fennel-NG] Routes configured successfully');
         }
@@ -62,17 +62,17 @@ function setuproutes() {
     if(config.LSE_Loglevel >= 2) {
         LSE_Logger.debug(`[Fennel-NG] Registering route: ${prefix + '/cal/'}`);
     }
-    crossroads.addroute(prefix + '/', onhitroot);
-    crossroads.addroute(prefix + '/.well-known/{type}', onhitwellknown);
-    crossroads.addroute(prefix + '/p/{params*}', onhitprincipal);
-    crossroads.addroute(prefix + '/cal/', onhitcalendarroot);
-    crossroads.addroute(prefix + '/cal', onhitcalendarroot);
-    crossroads.addroute(prefix + '/cal/{caldav_username}', onhitcalendar);
-    crossroads.addroute(prefix + '/cal/{caldav_username}/', onhitcalendar);
-    crossroads.addroute(prefix + '/cal/{caldav_username}/{params*}', onhitcalendar);
-    crossroads.addroute(prefix + '/card/', onhitaddressbookroot);
-    crossroads.addroute(prefix + '/card', onhitaddressbookroot);
-    crossroads.addroute(prefix + '/card/{caldav_username}/{params*}', onhitaddressbook);
+    crossroads.addRoute(prefix + '/', onhitroot);
+    crossroads.addRoute(prefix + '/.well-known/{type}', onhitwellknown);
+    crossroads.addRoute(prefix + '/p/{params*}', onhitprincipal);
+    crossroads.addRoute(prefix + '/cal/', onhitcalendarroot);
+    crossroads.addRoute(prefix + '/cal', onhitcalendarroot);
+    crossroads.addRoute(prefix + '/cal/{caldav_username}', onhitcalendar);
+    crossroads.addRoute(prefix + '/cal/{caldav_username}/', onhitcalendar);
+    crossroads.addRoute(prefix + '/cal/{caldav_username}/{params*}', onhitcalendar);
+    crossroads.addRoute(prefix + '/card/', onhitaddressbookroot);
+    crossroads.addRoute(prefix + '/card', onhitaddressbookroot);
+    crossroads.addRoute(prefix + '/card/{caldav_username}/{params*}', onhitaddressbook);
     if(config.LSE_Loglevel >= 2) {
         LSE_Logger.debug(`[Fennel-NG] onBypass: ${onbypass}`);
     }
