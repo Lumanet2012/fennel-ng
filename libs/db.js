@@ -1,13 +1,15 @@
-var config = require('../config').config;
-var pool = require('../config').fennelNGPool;
-var Sequelize = require('sequelize');
-var sequelize = new Sequelize(config.db_name, config.db_uid, config.db_pwd, {
+const config = require('../config').config;
+const pool = require('../config').fennelngpool;
+const sequelize = require('sequelize');
+const seq = new sequelize(config.db_name, config.db_uid, config.db_pwd, {
     host: config.db_host || 'localhost',
     port: config.db_port || 3306,
     dialect: 'mysql',
     logging: function(info) { 
         if(config.db_logging) {
-            LSE_Logger.debug(`[Fennel-NG DB] ${info}`);
+            if(config.LSE_Loglevel >= 2) {
+                LSE_Logger.debug('[Fennel-NG DB] ' + info);
+            }
         }
     },
     pool: {
@@ -22,207 +24,225 @@ var sequelize = new Sequelize(config.db_name, config.db_uid, config.db_pwd, {
         freezeTableName: true
     }
 });
-var PRINCIPALS = sequelize.define('principals', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    uri: { type: Sequelize.STRING(200), allowNull: false, unique: true },
-    email: { type: Sequelize.STRING(80), allowNull: true },
-    displayname: { type: Sequelize.STRING(80), allowNull: true }
+const principals = seq.define('principals', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    uri: { type: sequelize.STRING(200), allowNull: false, unique: true },
+    email: { type: sequelize.STRING(80), allowNull: true },
+    displayname: { type: sequelize.STRING(80), allowNull: true }
 }, {
     tableName: 'principals',
     timestamps: false
 });
-var USERS = sequelize.define('users', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    username: { type: Sequelize.STRING(50), allowNull: true, unique: true },
-    digesta1: { type: Sequelize.STRING(32), allowNull: true }
+const users = seq.define('users', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    username: { type: sequelize.STRING(50), allowNull: true, unique: true },
+    digesta1: { type: sequelize.STRING(32), allowNull: true }
 }, {
     tableName: 'users',
     timestamps: false
 });
-var CALENDARS = sequelize.define('calendars', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    principaluri: { type: Sequelize.STRING(255), allowNull: true },
-    synctoken: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
-    components: { type: Sequelize.STRING(21), allowNull: true },
-    displayname: { type: Sequelize.STRING(100), allowNull: true },
-    uri: { type: Sequelize.STRING(200), allowNull: false },
-    description: { type: Sequelize.TEXT, allowNull: true },
-    calendarorder: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },
-    calendarcolor: { type: Sequelize.STRING(10), allowNull: true },
-    timezone: { type: Sequelize.TEXT, allowNull: true },
-    transparent: { type: Sequelize.BOOLEAN, allowNull: true },
-    shared: { type: Sequelize.BOOLEAN, allowNull: true }
+const calendars = seq.define('calendars', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    principaluri: { type: sequelize.STRING(255), allowNull: true },
+    synctoken: { type: sequelize.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 },
+    components: { type: sequelize.STRING(21), allowNull: true },
+    displayname: { type: sequelize.STRING(100), allowNull: true },
+    uri: { type: sequelize.STRING(200), allowNull: false },
+    description: { type: sequelize.TEXT, allowNull: true },
+    calendarorder: { type: sequelize.INTEGER.UNSIGNED, allowNull: true },
+    calendarcolor: { type: sequelize.STRING(10), allowNull: true },
+    timezone: { type: sequelize.TEXT, allowNull: true },
+    transparent: { type: sequelize.BOOLEAN, allowNull: true },
+    shared: { type: sequelize.BOOLEAN, allowNull: true }
 }, {
     tableName: 'calendars',
     timestamps: false
 });
-var CALENDAROBJECTS = sequelize.define('calendarobjects', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    calendardata: { type: Sequelize.BLOB('medium'), allowNull: true },
-    uri: { type: Sequelize.STRING(200), allowNull: true },
-    calendarid: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false },
-    lastmodified: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },
-    etag: { type: Sequelize.STRING(32), allowNull: true },
-    size: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false },
-    componenttype: { type: Sequelize.STRING(8), allowNull: true },
-    firstoccurence: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },
-    lastoccurence: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },
-    uid: { type: Sequelize.STRING(200), allowNull: true }
+const calendarobjects = seq.define('calendarobjects', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    calendardata: { type: sequelize.BLOB('medium'), allowNull: true },
+    uri: { type: sequelize.STRING(200), allowNull: true },
+    calendarid: { type: sequelize.INTEGER.UNSIGNED, allowNull: false },
+    lastmodified: { type: sequelize.INTEGER.UNSIGNED, allowNull: true },
+    etag: { type: sequelize.STRING(32), allowNull: true },
+    size: { type: sequelize.INTEGER.UNSIGNED, allowNull: false },
+    componenttype: { type: sequelize.STRING(8), allowNull: true },
+    firstoccurence: { type: sequelize.INTEGER.UNSIGNED, allowNull: true },
+    lastoccurence: { type: sequelize.INTEGER.UNSIGNED, allowNull: true },
+    uid: { type: sequelize.STRING(200), allowNull: true }
 }, {
     tableName: 'calendarobjects',
     timestamps: false
 });
-var CALENDARCHANGES = sequelize.define('calendarchanges', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    uri: { type: Sequelize.STRING(200), allowNull: false },
-    synctoken: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false },
-    calendarid: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false },
-    operation: { type: Sequelize.TINYINT(1), allowNull: false }
+const calendarchanges = seq.define('calendarchanges', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    uri: { type: sequelize.STRING(200), allowNull: false },
+    synctoken: { type: sequelize.INTEGER.UNSIGNED, allowNull: false },
+    calendarid: { type: sequelize.INTEGER.UNSIGNED, allowNull: false },
+    operation: { type: sequelize.TINYINT(1), allowNull: false }
 }, {
     tableName: 'calendarchanges',
     timestamps: false
 });
-var ADDRESSBOOKS = sequelize.define('addressbooks', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    principaluri: { type: Sequelize.STRING(255), allowNull: true },
-    displayname: { type: Sequelize.STRING(255), allowNull: true },
-    uri: { type: Sequelize.STRING(200), allowNull: true },
-    description: { type: Sequelize.TEXT, allowNull: true },
-    synctoken: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 }
+const addressbooks = seq.define('addressbooks', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    principaluri: { type: sequelize.STRING(255), allowNull: true },
+    displayname: { type: sequelize.STRING(255), allowNull: true },
+    uri: { type: sequelize.STRING(200), allowNull: true },
+    description: { type: sequelize.TEXT, allowNull: true },
+    synctoken: { type: sequelize.INTEGER.UNSIGNED, allowNull: false, defaultValue: 1 }
 }, {
     tableName: 'addressbooks',
     timestamps: false
 });
-var VCARDS = sequelize.define('cards', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    addressbookid: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false },
-    carddata: { type: Sequelize.BLOB('medium'), allowNull: true },
-    uri: { type: Sequelize.STRING(200), allowNull: true },
-    lastmodified: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },
-    etag: { type: Sequelize.STRING(32), allowNull: true },
-    size: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false }
+const vcards = seq.define('cards', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    addressbookid: { type: sequelize.INTEGER.UNSIGNED, allowNull: false },
+    carddata: { type: sequelize.BLOB('medium'), allowNull: true },
+    uri: { type: sequelize.STRING(200), allowNull: true },
+    lastmodified: { type: sequelize.INTEGER.UNSIGNED, allowNull: true },
+    etag: { type: sequelize.STRING(32), allowNull: true },
+    size: { type: sequelize.INTEGER.UNSIGNED, allowNull: false }
 }, {
     tableName: 'cards',
     timestamps: false
 });
-var ADDRESSBOOKCHANGES = sequelize.define('addressbookchanges', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    uri: { type: Sequelize.STRING(200), allowNull: false },
-    synctoken: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false },
-    addressbookid: { type: Sequelize.INTEGER.UNSIGNED, allowNull: false },
-    operation: { type: Sequelize.TINYINT(1), allowNull: false }
+const addressbookchanges = seq.define('addressbookchanges', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    uri: { type: sequelize.STRING(200), allowNull: false },
+    synctoken: { type: sequelize.INTEGER.UNSIGNED, allowNull: false },
+    addressbookid: { type: sequelize.INTEGER.UNSIGNED, allowNull: false },
+    operation: { type: sequelize.TINYINT(1), allowNull: false }
 }, {
     tableName: 'addressbookchanges',
     timestamps: false
 });
-var LOCKS = sequelize.define('locks', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    owner: { type: Sequelize.STRING(100), allowNull: true },
-    timeout: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },
-    created: { type: Sequelize.INTEGER, allowNull: true },
-    token: { type: Sequelize.STRING(100), allowNull: true },
-    scope: { type: Sequelize.TINYINT(4), allowNull: true },
-    depth: { type: Sequelize.TINYINT(4), allowNull: true },
-    uri: { type: Sequelize.STRING(1000), allowNull: true }
+const locks = seq.define('locks', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    owner: { type: sequelize.STRING(100), allowNull: true },
+    timeout: { type: sequelize.INTEGER.UNSIGNED, allowNull: true },
+    created: { type: sequelize.INTEGER, allowNull: true },
+    token: { type: sequelize.STRING(100), allowNull: true },
+    scope: { type: sequelize.TINYINT(4), allowNull: true },
+    depth: { type: sequelize.TINYINT(4), allowNull: true },
+    uri: { type: sequelize.STRING(1000), allowNull: true }
 }, {
     tableName: 'locks',
     timestamps: false
 });
-var PROPERTYSTORAGE = sequelize.define('propertystorage', {
-    id: { type: Sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-    path: { type: Sequelize.STRING(1024), allowNull: false },
-    name: { type: Sequelize.STRING(100), allowNull: false },
-    valuetype: { type: Sequelize.INTEGER.UNSIGNED, allowNull: true },
-    value: { type: Sequelize.BLOB('medium'), allowNull: true }
+const propertystorage = seq.define('propertystorage', {
+    id: { type: sequelize.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
+    path: { type: sequelize.STRING(1024), allowNull: false },
+    name: { type: sequelize.STRING(100), allowNull: false },
+    valuetype: { type: sequelize.INTEGER.UNSIGNED, allowNull: true },
+    value: { type: sequelize.BLOB('medium'), allowNull: true }
 }, {
     tableName: 'propertystorage',
     timestamps: false
 });
-CALENDAROBJECTS.belongsTo(CALENDARS, { foreignKey: 'calendarid', targetKey: 'id' });
-CALENDARS.hasMany(CALENDAROBJECTS, { foreignKey: 'calendarid', sourceKey: 'id' });
-CALENDARCHANGES.belongsTo(CALENDARS, { foreignKey: 'calendarid', targetKey: 'id' });
-CALENDARS.hasMany(CALENDARCHANGES, { foreignKey: 'calendarid', sourceKey: 'id' });
-VCARDS.belongsTo(ADDRESSBOOKS, { foreignKey: 'addressbookid', targetKey: 'id' });
-ADDRESSBOOKS.hasMany(VCARDS, { foreignKey: 'addressbookid', sourceKey: 'id' });
-ADDRESSBOOKCHANGES.belongsTo(ADDRESSBOOKS, { foreignKey: 'addressbookid', targetKey: 'id' });
-ADDRESSBOOKS.hasMany(ADDRESSBOOKCHANGES, { foreignKey: 'addressbookid', sourceKey: 'id' });
-async function testDatabaseConnection() {
+calendarobjects.belongsTo(calendars, { foreignKey: 'calendarid', targetKey: 'id' });
+calendars.hasMany(calendarobjects, { foreignKey: 'calendarid', sourceKey: 'id' });
+calendarchanges.belongsTo(calendars, { foreignKey: 'calendarid', targetKey: 'id' });
+calendars.hasMany(calendarchanges, { foreignKey: 'calendarid', sourceKey: 'id' });
+vcards.belongsTo(addressbooks, { foreignKey: 'addressbookid', targetKey: 'id' });
+addressbooks.hasMany(vcards, { foreignKey: 'addressbookid', sourceKey: 'id' });
+addressbookchanges.belongsTo(addressbooks, { foreignKey: 'addressbookid', targetKey: 'id' });
+addressbooks.hasMany(addressbookchanges, { foreignKey: 'addressbookid', sourceKey: 'id' });
+async function testdatabaseconnection() {
     try {
-        await sequelize.authenticate();
-        LSE_Logger.info('[Fennel-NG DB] MySQL connection established successfully');
+        await seq.authenticate();
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info('[Fennel-NG DB] MySQL connection established successfully');
+        }
         return true;
     } catch (error) {
-        LSE_Logger.error(`[Fennel-NG DB] Unable to connect to MySQL: ${error.message}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG DB] Unable to connect to MySQL: ' + error.message);
+        }
         return false;
     }
 }
-async function syncDatabase() {
+async function syncdatabase() {
     try {
-        await sequelize.sync({ alter: false });
-        LSE_Logger.info('[Fennel-NG DB] Database synchronized successfully');
+        await seq.sync({ alter: false });
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info('[Fennel-NG DB] Database synchronized successfully');
+        }
         return true;
     } catch (error) {
-        LSE_Logger.error(`[Fennel-NG DB] Database synchronization failed: ${error.message}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG DB] Database synchronization failed: ' + error.message);
+        }
         return false;
     }
 }
-async function executeRawQuery(query, params) {
+async function executerawquery(query, params) {
     try {
-        var [results, metadata] = await sequelize.query(query, {
+        const [results, metadata] = await seq.query(query, {
             replacements: params || [],
-            type: Sequelize.QueryTypes.SELECT
+            type: sequelize.QueryTypes.SELECT
         });
         return results;
     } catch (error) {
-        LSE_Logger.error(`[Fennel-NG DB] Raw query failed: ${error.message}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG DB] Raw query failed: ' + error.message);
+        }
         throw error;
     }
 }
-async function executeRawUpdate(query, params) {
+async function executerawupdate(query, params) {
     try {
-        var [results, metadata] = await sequelize.query(query, {
+        const [results, metadata] = await seq.query(query, {
             replacements: params || [],
-            type: Sequelize.QueryTypes.UPDATE
+            type: sequelize.QueryTypes.UPDATE
         });
         return metadata;
     } catch (error) {
-        LSE_Logger.error(`[Fennel-NG DB] Raw update failed: ${error.message}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG DB] Raw update failed: ' + error.message);
+        }
         throw error;
     }
 }
-async function getUserPrincipal(username) {
+async function getuserprincipal(username) {
     try {
-        var principal = await PRINCIPALS.findOne({
-            where: { uri: `principals/${username}` }
+        const principal = await principals.findOne({
+            where: { uri: 'principals/' + username }
         });
         return principal;
     } catch (error) {
-        LSE_Logger.error(`[Fennel-NG DB] Error getting user principal: ${error.message}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG DB] Error getting user principal: ' + error.message);
+        }
         return null;
     }
 }
-async function createUserPrincipal(username, email, displayname) {
+async function createuserprincipal(username, email, displayname) {
     try {
-        var principal = await PRINCIPALS.create({
-            uri: `principals/${username}`,
+        const principal = await principals.create({
+            uri: 'principals/' + username,
             email: email || null,
             displayname: displayname || username
         });
-        LSE_Logger.info(`[Fennel-NG DB] Created principal for user: ${username}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info('[Fennel-NG DB] Created principal for user: ' + username);
+        }
         return principal;
     } catch (error) {
-        LSE_Logger.error(`[Fennel-NG DB] Error creating user principal: ${error.message}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG DB] Error creating user principal: ' + error.message);
+        }
         return null;
     }
 }
-async function healthCheck() {
+async function healthcheck() {
     try {
-        var connectionTest = await testDatabaseConnection();
-        var queryTest = await executeRawQuery('SELECT 1 as test');
+        const connectiontest = await testdatabaseconnection();
+        const querytest = await executerawquery('SELECT 1 as test');
         return {
             status: 'ok',
-            connected: connectionTest,
-            queryWorking: queryTest && queryTest.length > 0,
+            connected: connectiontest,
+            queryworking: querytest && querytest.length > 0,
             database: config.db_name,
             host: config.db_host
         };
@@ -235,24 +255,24 @@ async function healthCheck() {
     }
 }
 module.exports = {
-    PRINCIPALS: PRINCIPALS,
-    USERS: USERS,
-    CALENDARS: CALENDARS,
-    CALENDAROBJECTS: CALENDAROBJECTS,
-    CALENDARCHANGES: CALENDARCHANGES,
-    ADDRESSBOOKS: ADDRESSBOOKS,
-    VCARDS: VCARDS,
-    ADDRESSBOOKCHANGES: ADDRESSBOOKCHANGES,
-    LOCKS: LOCKS,
-    PROPERTYSTORAGE: PROPERTYSTORAGE,
-    sequelize: sequelize,
+    principals: principals,
+    users: users,
+    calendars: calendars,
+    calendarobjects: calendarobjects,
+    calendarchanges: calendarchanges,
+    addressbooks: addressbooks,
+    vcards: vcards,
+    addressbookchanges: addressbookchanges,
+    locks: locks,
+    propertystorage: propertystorage,
+    sequelize: seq,
     pool: pool,
-    testDatabaseConnection: testDatabaseConnection,
-    syncDatabase: syncDatabase,
-    executeRawQuery: executeRawQuery,
-    executeRawUpdate: executeRawUpdate,
-    getUserPrincipal: getUserPrincipal,
-    createUserPrincipal: createUserPrincipal,
-    healthCheck: healthCheck
+    testdatabaseconnection: testdatabaseconnection,
+    syncdatabase: syncdatabase,
+    executerawquery: executerawquery,
+    executerawupdate: executerawupdate,
+    getuserprincipal: getuserprincipal,
+    createuserprincipal: createuserprincipal,
+    healthcheck: healthcheck
 };
 

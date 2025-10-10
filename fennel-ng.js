@@ -1,7 +1,7 @@
 const config = require('./config').config;
 const authlib = require('./libs/authentication');
 const handler = require('./libs/requesthandler');
-const comm = require('./libs/communication');
+const communication = require('./libs/communication');
 const redis = require('./libs/redis');
 const db = require('./libs/db');
 const httpauth = require('http-auth');
@@ -15,33 +15,41 @@ const basic = httpauth.basic(
         authlib.checkLogin(basic, username, password, callback);
     }
 );
-function initializeFennelNG()
+function initializefennelng()
 {
-    LSE_Logger.info('[Fennel-NG] Initializing Fennel-NG CalDAV/CardDAV server');
+    if(config.LSE_Loglevel >= 1) {
+        LSE_Logger.info('[Fennel-NG] Initializing Fennel-NG CalDAV/CardDAV server');
+    }
     return Promise.all([
-        redis.initializeRedis(),
-        db.testDatabaseConnection()
+        redis.initializeredis(),
+        db.testdatabaseconnection()
     ]).then(function(results)
     {
-        var redisInitialized = results[0];
-        var dbConnected = results[1];
-        if(!dbConnected)
+        const redisinitialized = results[0];
+        const dbconnected = results[1];
+        if(!dbconnected)
         {
             throw new Error('Database connection failed');
         }
-        LSE_Logger.info('[Fennel-NG] Redis and Database initialized successfully');
-        return db.syncDatabase();
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info('[Fennel-NG] Redis and Database initialized successfully');
+        }
+        return db.syncdatabase();
     }).then(function()
     {
-        LSE_Logger.info('[Fennel-NG] Database schema synchronized');
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info('[Fennel-NG] Database schema synchronized');
+        }
         setupRoutes();
-        LSE_Logger.info('[Fennel-NG] Routes configured successfully');
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info('[Fennel-NG] Routes configured successfully');
+        }
         return {
             status: 'initialized',
-            middleware: createExpressMiddleware(),
-            handleRequest: handleRequest,
-            healthCheck: healthCheck,
-            routes: getRoutes()
+            middleware: createexpressmiddleware(),
+            handlerequest: handlerequest,
+            healthcheck: healthcheck,
+            routes: getroutes()
         };
     }).catch(function(error)
     {
@@ -49,277 +57,418 @@ function initializeFennelNG()
         throw error;
     });
 }
-function setupRoutes() {
-    var prefix = config.public_route_prefix || '';
-    LSE_Logger.debug(`[Fennel-NG] Registering route: ${prefix + '/cal/'}`);
-    crossroads.addRoute(prefix + '/', onHitRoot);
-    crossroads.addRoute(prefix + '/.well-known/{type}', onHitWellKnown);
-    crossroads.addRoute(prefix + '/p/{params*}', onHitPrincipal);
-    crossroads.addRoute(prefix + '/cal/', onHitCalendarRoot);
-    crossroads.addRoute(prefix + '/cal', onHitCalendarRoot);
-    crossroads.addRoute(prefix + '/cal/{caldav_username}', onHitCalendar);
-    crossroads.addRoute(prefix + '/cal/{caldav_username}/', onHitCalendar);
-    crossroads.addRoute(prefix + '/cal/{caldav_username}/{params*}', onHitCalendar);
-    crossroads.addRoute(prefix + '/card/', onHitAddressbookRoot);
-    crossroads.addRoute(prefix + '/card', onHitAddressbookRoot);
-    crossroads.addRoute(prefix + '/card/{caldav_username}/{params*}', onHitAddressbook);
-    LSE_Logger.debug(`[Fennel-NG] onBypass: ${onBypass}`);
-    crossroads.bypassed.add(onBypass);
+function setuproutes() {
+    const prefix = config.public_route_prefix || '';
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG] Registering route: ${prefix + '/cal/'}`);
+    }
+    crossroads.addroute(prefix + '/', onhitroot);
+    crossroads.addroute(prefix + '/.well-known/{type}', onhitwellknown);
+    crossroads.addroute(prefix + '/p/{params*}', onhitprincipal);
+    crossroads.addroute(prefix + '/cal/', onhitcalendarroot);
+    crossroads.addroute(prefix + '/cal', onhitcalendarroot);
+    crossroads.addroute(prefix + '/cal/{caldav_username}', onhitcalendar);
+    crossroads.addroute(prefix + '/cal/{caldav_username}/', onhitcalendar);
+    crossroads.addroute(prefix + '/cal/{caldav_username}/{params*}', onhitcalendar);
+    crossroads.addroute(prefix + '/card/', onhitaddressbookroot);
+    crossroads.addroute(prefix + '/card', onhitaddressbookroot);
+    crossroads.addroute(prefix + '/card/{caldav_username}/{params*}', onhitaddressbook);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG] onBypass: ${onbypass}`);
+    }
+    crossroads.bypassed.add(onbypass);
 }
-function onBypass(comm, path)
+function onbypass(comm, path)
 {
-    LSE_Logger.info(`[Fennel-NG DEBUG] ========== BYPASS ROUTE ==========`);
-    LSE_Logger.info(`[Fennel-NG DEBUG] Unknown URL: ${path}`);
-    LSE_Logger.info(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.info(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.info(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.info(`[Fennel-NG DEBUG] =====================================`);
-    var res = comm.getRes();
-    res.writeHead(404);
-    res.write(`${path} is not a valid CalDAV/CardDAV endpoint`);
-    res.end();
-}
-function onHitRoot(comm)
-{
-    LSE_Logger.debug('[Fennel-NG DEBUG] ========== ROOT HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Redirecting to /p/`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] =============================');
-    comm.getRes().writeHead(302, { 'Location': comm.getFullURL('/p/') });
-    comm.flushResponse();
-}
-function onHitWellKnown(comm, type)
-{
-    LSE_Logger.debug('[Fennel-NG DEBUG] ========== WELL-KNOWN HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Type: ${type}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
-    let location = type === 'caldav' ? '/cal/' : (type === 'carddav' ? '/card/' : '/p/');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Redirecting to: ${location}`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] ===================================');
-    comm.getRes().writeHead(302, { 'Location': comm.getFullURL(location) });
-}
-function onHitPrincipal(comm, params)
-{
-    LSE_Logger.debug('[Fennel-NG DEBUG] ========== PRINCIPAL HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] ==================================');
-    comm.params = params;
-    if(!comm.checkPermission('/p/' + (params || ''), comm.getReq().method))
-    {
-        var res = comm.getRes();
-        LSE_Logger.warn(`[Fennel-NG] Request denied for user: ${comm.getUser().getUserName()}`);
-        res.writeHead(403);
-        res.write("Access denied to this resource");
+    try {
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info(`[Fennel-NG DEBUG] ========== BYPASS ROUTE ==========`);
+            LSE_Logger.info(`[Fennel-NG DEBUG] Unknown URL: ${path}`);
+            LSE_Logger.info(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.info(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.info(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            LSE_Logger.info(`[Fennel-NG DEBUG] =====================================`);
+        }
+        const res = comm.getres();
+        res.writeHead(404);
+        res.write(`${path} is not a valid CalDAV/CardDAV endpoint`);
         res.end();
-        return;
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onbypass: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
     }
-    handler.handlePrincipal(comm);
 }
-function onHitCalendar(comm, caldav_username, params)
+function onhitroot(comm)
 {
-    LSE_Logger.debug('[Fennel-NG DEBUG] ========== CALENDAR HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] CalDAV Username: ${caldav_username}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] =================================');
-    var username = caldav_username.replace(/-/g, '@');
-    comm.username = username;
-    comm.caldav_username = caldav_username;
-    comm.params = params;
-    var calendarPath = comm.getFullURL("/cal/") + caldav_username + "/" + (params || '');
-    if(!comm.checkPermission(calendarPath, comm.getReq().method))
-    {
-        var res = comm.getRes();
-        LSE_Logger.warn(`[Fennel-NG] Calendar request denied for user: ${comm.getUser().getUserName()}`);
-        res.writeHead(403);
-        res.write("Access denied to this calendar resource");
-        res.end();
-        return;
+    try {
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug('[Fennel-NG DEBUG] ========== ROOT HIT ==========');
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Redirecting to /p/`);
+            LSE_Logger.debug('[Fennel-NG DEBUG] =============================');
+        }
+        comm.getres().writeHead(302, { 'Location': comm.getfullurl('/p/') });
+        comm.flushresponse();
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onhitroot: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
     }
-    handler.handleCalendar(comm);
 }
-function onHitAddressbook(comm, caldav_username, params)
+function onhitwellknown(comm, type)
 {
-    LSE_Logger.debug('[Fennel-NG DEBUG] ========== ADDRESSBOOK HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] CalDAV Username: ${caldav_username}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
-    var username = caldav_username.replace(/-/g, '@');
-    comm.username = username;
-    comm.caldav_username = caldav_username;
-    comm.params = params;
-    var addressbookPath = comm.getFullURL("/card/") + caldav_username + "/" + (params || '');
-    if(!comm.checkPermission(addressbookPath, comm.getReq().method))
-    {
-        var res = comm.getRes();
-        LSE_Logger.warn(`[Fennel-NG] CardDAV request denied for user: ${comm.getUser().getUserName()}`);
-        res.writeHead(403);
-        res.write("Access denied to this addressbook resource");
-        res.end();
-        return;
+    try {
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug('[Fennel-NG DEBUG] ========== WELL-KNOWN HIT ==========');
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Type: ${type}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
+        }
+        const location = type === 'caldav' ? '/cal/' : (type === 'carddav' ? '/card/' : '/p/');
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Redirecting to: ${location}`);
+            LSE_Logger.debug('[Fennel-NG DEBUG] ===================================');
+        }
+        comm.getres().writeHead(302, { 'Location': comm.getfullurl(location) });
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onhitwellknown: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
     }
-    handler.handleAddressbook(comm);
 }
-function onHitCalendarRoot(comm)
+function onhitprincipal(comm, params)
 {
-    LSE_Logger.debug('[Fennel-NG DEBUG] ========== CALENDAR ROOT HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] ======================================');
-    if(!comm.checkPermission('/cal/', comm.getReq().method))
-    {
-        var res = comm.getRes();
-        LSE_Logger.warn(`[Fennel-NG] Calendar root request denied for user: ${comm.getUser().getUserName()}`);
-        res.writeHead(403);
-        res.write("Access denied to calendar root");
-        res.end();
-        return;
+    try {
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug('[Fennel-NG DEBUG] ========== PRINCIPAL HIT ==========');
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
+            LSE_Logger.debug('[Fennel-NG DEBUG] ==================================');
+        }
+        comm.params = params;
+        if(!comm.checkpermission('/p/' + (params || ''), comm.getreq().method))
+        {
+            const res = comm.getres();
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG] Request denied for user: ${comm.getuser().getusername()}`);
+            }
+            res.writeHead(403);
+            res.write("Access denied to this resource");
+            res.end();
+            return;
+        }
+        handler.handleprincipal(comm);
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onHitPrincipal: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
     }
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Calling handler.handleCalendarRoot`);
-    handler.handleCalendarRoot(comm);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] handler.handleCalendarRoot completed`);
 }
-function onHitAddressbookRoot(comm)
+function onhitcalendar(comm, caldav_username, params)
 {
-    LSE_Logger.debug('[Fennel-NG DEBUG] ========== ADDRESSBOOK ROOT HIT ==========');
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getReq().method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getReq().url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getReq().headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getReqBody()}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getUser().getUserName()}`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] =========================================');
-    if(!comm.checkPermission('/card/', comm.getReq().method))
-    {
-        var res = comm.getRes();
-        LSE_Logger.warn(`[Fennel-NG] Addressbook root request denied for user: ${comm.getUser().getUserName()}`);
-        res.writeHead(403);
-        res.write("Access denied to addressbook root");
-        res.end();
-        return;
+    try {
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug('[Fennel-NG DEBUG] ========== CALENDAR HIT ==========');
+            LSE_Logger.debug(`[Fennel-NG DEBUG] CalDAV Username: ${caldav_username}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            if(comm.getuser()) {
+                LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
+            }
+            LSE_Logger.debug('[Fennel-NG DEBUG] =================================');
+        }
+        const username = caldav_username.replace(/-/g, '@');
+        comm.username = username;
+        comm.caldav_username = caldav_username;
+        comm.params = params;
+        const calendarpath = comm.getfullurl("/cal/") + caldav_username + "/" + (params || '');
+        if(!comm.checkpermission(calendarpath, comm.getreq().method))
+        {
+            const res = comm.getres();
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG] Calendar request denied for user: ${comm.getuser().getUserName()}`);
+            }
+            res.writeHead(403);
+            res.write("Access denied to this calendar resource");
+            res.end();
+            return;
+        }
+        handler.handleCalendar(comm);
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onHitCalendar: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
     }
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Calling handler.handleAddressbookRoot`);
-    handler.handleAddressbookRoot(comm);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] handler.handleAddressbookRoot completed`);
 }
-function handleRequest(req, res, next)
+function onhitaddressbook(comm, caldav_username, params)
 {
-    LSE_Logger.debug(`[Fennel-NG DEBUG] ========== INCOMING REQUEST ==========`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${req.method}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Original URL: ${req.originalUrl || req.url}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(req.headers)}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] Remote IP: ${req.connection.remoteAddress || req.socket.remoteAddress}`);
-    LSE_Logger.debug(`[Fennel-NG DEBUG] User Agent: ${req.headers['user-agent']}`);
-    LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
-    var originalUrl = req.originalUrl || req.url;
-    var prefix = config.public_route_prefix || '';
-    var cleanUrl = originalUrl;
-    if(prefix && originalUrl.startsWith(prefix)) {
-        cleanUrl = originalUrl.substring(prefix.length);
+    try {
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug('[Fennel-NG DEBUG] ========== ADDRESSBOOK HIT ==========');
+            LSE_Logger.debug(`[Fennel-NG DEBUG] CalDAV Username: ${caldav_username}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Params: ${params}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
+            LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
+        }
+        const username = caldav_username.replace(/-/g, '@');
+        comm.username = username;
+        comm.caldav_username = caldav_username;
+        comm.params = params;
+        const addressbookpath = comm.getfullurl("/card/") + caldav_username + "/" + (params || '');
+        if(!comm.checkpermission(addressbookpath, comm.getreq().method))
+        {
+            const res = comm.getres();
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG] CardDAV request denied for user: ${comm.getuser().getUserName()}`);
+            }
+            res.writeHead(403);
+            res.write("Access denied to this addressbook resource");
+            res.end();
+            return;
+        }
+        handler.handleaddressbook(comm);
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onhitaddressbook: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
     }
-    if(cleanUrl === '') cleanUrl = '/';
-    LSE_Logger.debug(`[Fennel-NG DEBUG] URL Processing: original='${originalUrl}' prefix='${prefix}' clean='${cleanUrl}'`);
-    var reqBody = "";
+}
+function onhitcalendarroot(comm)
+{
+    try {
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug('[Fennel-NG DEBUG] ========== CALENDAR ROOT HIT ==========');
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
+            LSE_Logger.debug('[Fennel-NG DEBUG] ======================================');
+        }
+        if(!comm.checkpermission('/cal/', comm.getreq().method))
+        {
+            const res = comm.getres();
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG] Calendar root request denied for user: ${comm.getuser().getusername()}`);
+            }
+            res.writeHead(403);
+            res.write("Access denied to calendar root");
+            res.end();
+            return;
+        }
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Calling handler.handlecalendarroot`);
+        }
+        handler.handleCalendarRoot(comm);
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] handler.handlecalendarroot completed`);
+        }
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onhitcalendarroot: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
+    }
+}
+function onhitaddressbookroot(comm)
+{
+    try {
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug('[Fennel-NG DEBUG] ========== ADDRESSBOOK ROOT HIT ==========');
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${comm.getreq().method}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getUserName()}`);
+            LSE_Logger.debug('[Fennel-NG DEBUG] =========================================');
+        }
+        if(!comm.checkpermission('/card/', comm.getreq().method))
+        {
+            const res = comm.getres();
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG] Addressbook root request denied for user: ${comm.getuser().getUserName()}`);
+            }
+            res.writeHead(403);
+            res.write("Access denied to addressbook root");
+            res.end();
+            return;
+        }
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Calling handler.handleAddressbookRoot`);
+        }
+        handler.handleaddressbookroot(comm);
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] handler.handleAddressbookRoot completed`);
+        }
+    } catch(error) {
+        LSE_Logger.error(`[Fennel-NG] Error in onHitAddressbookRoot: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
+        if(comm && comm.getres && !comm.getres().headersSent) {
+            comm.getres().writeHead(500);
+            comm.getres().end('Internal server error');
+        }
+    }
+}
+function handlerequest(req, res, next)
+{
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG DEBUG] ========== INCOMING REQUEST ==========`);
+        LSE_Logger.debug(`[Fennel-NG DEBUG] Method: ${req.method}`);
+        LSE_Logger.debug(`[Fennel-NG DEBUG] Original URL: ${req.originalUrl || req.url}`);
+        LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(req.headers)}`);
+        LSE_Logger.debug(`[Fennel-NG DEBUG] Remote IP: ${req.connection.remoteAddress || req.socket.remoteAddress}`);
+        LSE_Logger.debug(`[Fennel-NG DEBUG] User Agent: ${req.headers['user-agent']}`);
+        LSE_Logger.debug('[Fennel-NG DEBUG] =====================================');
+    }
+    const originalurl = req.originalurl || req.url;
+    const prefix = config.public_route_prefix || '';
+    let cleanurl = originalurl;
+    if(prefix && originalurl.startsWith(prefix)) {
+        cleanurl = originalurl.substring(prefix.length);
+    }
+    if(cleanurl === '') cleanurl = '/';
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG DEBUG] URL Processing: original='${originalurl}' prefix='${prefix}' clean='${cleanurl}'`);
+    }
+    let reqbody = "";
     req.on('data', function (data)
     {
-        reqBody += data.toString();
-        LSE_Logger.debug(`[Fennel-NG DEBUG] Data chunk received: ${data.length} bytes`);
+        reqbody += data.toString();
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Data chunk received: ${data.length} bytes`);
+        }
     });
     req.on('end', function()
     {
-        LSE_Logger.debug(`[Fennel-NG DEBUG] Request body complete: ${reqBody.length} bytes`);
-        LSE_Logger.debug(`[Fennel-NG DEBUG] Full request body: ${reqBody}`);
-        authlib.authenticateRequest(req).then(function(authResult)
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Request body complete: ${reqbody.length} bytes`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] Full request body: ${reqbody}`);
+        }
+        authlib.authenticaterequest(req).then(function(authresult)
         {
-            LSE_Logger.debug(`[Fennel-NG DEBUG] Authentication result: ${JSON.stringify(authResult)}`);
-            if(!authResult.success)
+            if(config.LSE_Loglevel >= 2) {
+                LSE_Logger.debug(`[Fennel-NG DEBUG] Authentication result: ${JSON.stringify(authresult)}`);
+            }
+            if(!authresult.success)
             {
-                LSE_Logger.warn(`[Fennel-NG] Authentication failed: ${authResult.error}`);
-                if(config.auth_method.includes('jwt'))
-                {
-                    res.writeHead(401, {
-                        'WWW-Authenticate': 'Bearer realm="Fennel-NG", Basic realm="Fennel-NG"',
-                        'Content-Type': 'application/json'
-                    });
-                    res.end(JSON.stringify({
-                        error: 'Authentication required',
-                        message: authResult.error
-                    }));
+                if(config.LSE_Loglevel >= 1) {
+                    LSE_Logger.warn(`[Fennel-NG] Authentication failed: ${authresult.error}`);
                 }
-                else
+                if(!res.headersSent)
                 {
-                    res.writeHead(401, {
-                        'WWW-Authenticate': 'Basic realm="Fennel-NG"'
-                    });
-                    res.end('Authentication required');
+                    if(config.auth_method.includes('jwt'))
+                    {
+                        res.writeHead(401, {
+                            'WWW-Authenticate': 'Bearer realm="Fennel-NG", Basic realm="Fennel-NG"',
+                            'Content-Type': 'application/json'
+                        });
+                        res.end(JSON.stringify({
+                            error: 'Authentication required',
+                            message: authresult.error
+                        }));
+                    }
+                    else
+                    {
+                        res.writeHead(401, {
+                            'WWW-Authenticate': 'Basic realm="Fennel-NG"'
+                        });
+                        res.end('Authentication required');
+                    }
                 }
                 return;
             }
             try
             {
-                var tempReq = {
-                    url: cleanUrl,
+                const tempreq = {
+                    url: cleanurl,
                     method: req.method,
                     headers: req.headers || {},
                     connection: req.connection,
                     socket: req.socket,
                     originalUrl: req.originalUrl
                 };
-                const commobj = new comm(tempReq, res, reqBody, authResult);
-                commobj.processrequest();
-                LSE_Logger.debug(`[Fennel-NG DEBUG] Communication object created for user: ${authResult.username}`);
-                LSE_Logger.debug(`[Fennel-NG DEBUG] Parsing URL with crossroads: ${originalUrl}`);
-                crossroads.parse(originalUrl, [commobj]);
-                LSE_Logger.debug(`[Fennel-NG DEBUG] Crossroads parsing completed`);
+                const comm = new communication(tempreq, res, reqbody, authresult);
+                if(config.LSE_Loglevel >= 2) {
+                    LSE_Logger.debug(`[Fennel-NG DEBUG] Communication object created for user: ${authresult.username}`);
+                    LSE_Logger.debug(`[Fennel-NG DEBUG] Parsing URL with crossroads: ${originalurl}`);
+                }
+                crossroads.parse(originalurl, [comm]);
+                if(config.LSE_Loglevel >= 2) {
+                    LSE_Logger.debug(`[Fennel-NG DEBUG] Crossroads parsing completed`);
+                }
             }
             catch(error)
             {
                 LSE_Logger.error(`[Fennel-NG] Internal Request processing error: ${error.message}`);
                 LSE_Logger.error(`[Fennel-NG DEBUG] Error stack: ${error.stack}`);
-                res.writeHead(500);
-                res.end('Internal server error');
+                if(!res.headersSent)
+                {
+                    res.writeHead(500);
+                    res.end('Internal server error');
+                }
             }
         }).catch(function(error)
         {
             LSE_Logger.error(`[Fennel-NG] Authentication error: ${error.message}`);
             LSE_Logger.error(`[Fennel-NG DEBUG] Auth error stack: ${error.stack}`);
-            res.writeHead(500);
-            res.end('Authentication system error');
+            if(!res.headersSent)
+            {
+                res.writeHead(500);
+                res.end('Authentication system error');
+            }
         });
     });
     req.on('error', function(error)
     {
         LSE_Logger.error(`[Fennel-NG] Request error: ${error.message}`);
         LSE_Logger.error(`[Fennel-NG DEBUG] Request error stack: ${error.stack}`);
-        res.writeHead(400);
-        res.end('Bad request');
+        if(!res.headersSent)
+        {
+            res.writeHead(400);
+            res.end('Bad request');
+        }
     });
 }
-function getRoutes()
+function getroutes()
 {
     return [
         { path: '/p', methods: ['PROPFIND', 'PROPPATCH', 'OPTIONS', 'REPORT'] },
@@ -329,7 +478,7 @@ function getRoutes()
         { path: '/', methods: ['GET'] }
     ];
 }
-function healthCheck()
+function healthcheck()
 {
     return Promise.all([
         redis.healthCheck(),
@@ -337,17 +486,17 @@ function healthCheck()
         authlib.healthCheck()
     ]).then(function(results)
     {
-        var redisHealth = results[0];
-        var dbHealth = results[1];
-        var authHealth = results[2];
+        const redishealth = results[0];
+        const dbhealth = results[1];
+        const authhealth = results[2];
         return {
             status: 'ok',
             timestamp: new Date().toISOString(),
             version: config.version_nr,
             components: {
-                redis: redisHealth,
-                database: dbHealth,
-                authentication: authHealth
+                redis: redishealth,
+                database: dbhealth,
+                authentication: authhealth
             },
             routes: getRoutes().length,
             auth_method: config.auth_method
@@ -362,49 +511,29 @@ function healthCheck()
         };
     });
 }
-function createExpressMiddleware() {
+function createexpressmiddleware() {
     return function(req, res, next) {
-        var originalUrl = req.originalUrl || req.url;
-        var prefix = config.public_route_prefix || '';
-        var isFennelPath = prefix && originalUrl.startsWith(prefix);
-        if (isFennelPath) {
-            const allowedOrigins = [
-                'https://marketing.lumanet.info',
-                'https://atl-webcal01.lumanet.info',
-                'http://localhost:3000'
-            ];
-            const origin = req.headers.origin;
-            const isAllowedOrigin = allowedOrigins.includes(origin);
-            const originalWriteHead = res.writeHead;
-            res.writeHead = function(statusCode, headers) {
-                if (isAllowedOrigin) {
-                    const corsHeaders = {
-                        'Access-Control-Allow-Origin': origin,
-                        'Access-Control-Allow-Credentials': 'true',
-                        'Access-Control-Expose-Headers': 'ETag, DAV, Preference-Applied'
-                    };
-                    const mergedHeaders = Object.assign({}, corsHeaders, headers || {});
-                    originalWriteHead.call(this, statusCode, mergedHeaders);
-                } else {
-                    originalWriteHead.call(this, statusCode, headers);
-                }
-            };
-            if (req.method === 'OPTIONS') {
-                res.writeHead(204);
-                res.end();
-                return;
+        const originalurl = req.originalurl || req.url;
+        const prefix = config.public_route_prefix || '';
+        const isfennelpath = prefix && originalurl.startsWith(prefix);
+        if (isfennelpath) {
+            if(config.LSE_Loglevel >= 2) {
+                LSE_Logger.debug(`[Fennel-NG] Handling CalDAV/CardDAV request: ${originalurl}`);
             }
-            LSE_Logger.debug(`[Fennel-NG] Handling CalDAV/CardDAV request: ${originalUrl}`);
-            handleRequest(req, res, next);
+            handlerequest(req, res, next);
         } else {
-            LSE_Logger.debug(`[Fennel-NG] Skipping non-CalDAV/CardDAV request: ${originalUrl}`);
+            if(config.LSE_Loglevel >= 2) {
+                LSE_Logger.debug(`[Fennel-NG] Skipping non-CalDAV/CardDAV request: ${originalurl}`);
+            }
             next();
         }
     };
 }
 function shutdown()
 {
-    LSE_Logger.info('[Fennel-NG] Shutting down CalDAV/CardDAV server');
+    if(config.LSE_Loglevel >= 1) {
+        LSE_Logger.info('[Fennel-NG] Shutting down CalDAV/CardDAV server');
+    }
     return Promise.all([
         redis.initializeRedis().then(function(client) {
             if(client && client.disconnect) {
@@ -414,18 +543,21 @@ function shutdown()
         db.sequelize.close()
     ]).then(function()
     {
-        LSE_Logger.info('[Fennel-NG] Shutdown completed successfully');
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info('[Fennel-NG] Shutdown completed successfully');
+        }
     }).catch(function(error)
     {
         LSE_Logger.error(`[Fennel-NG] Shutdown error: ${error.message}`);
     });
 }
 module.exports = {
-    initialize: initializeFennelNG,
-    middleware: createExpressMiddleware,
-    handleRequest: handleRequest,
-    healthCheck: healthCheck,
+    initialize: initializefennelng,
+    middleware: createexpressmiddleware,
+    handlerequest: handlerequest,
+    healthcheck: healthcheck,
     shutdown: shutdown,
     version: config.version_nr,
-    routes: getRoutes
+    routes: getroutes
 };
+

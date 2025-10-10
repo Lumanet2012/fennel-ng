@@ -1,10 +1,12 @@
-function parseicslines(icsdata)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] parseicslines called with ${icsdata.length} bytes`);
-    var lines = icsdata.split(/\r?\n/);
-    var unfoldedlines = [];
-    for(var i = 0; i < lines.length; i++) {
-        var line = lines[i];
+const config = require('../config').config;
+function parseicslines(icsdata) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] parseicslines called with ' + icsdata.length + ' bytes');
+    }
+    const lines = icsdata.split(/\r?\n/);
+    const unfoldedlines = [];
+    for(let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         if(line.length === 0) continue;
         if(line.charAt(0) === ' ' || line.charAt(0) === '\t') {
             if(unfoldedlines.length > 0) {
@@ -14,26 +16,27 @@ function parseicslines(icsdata)
             unfoldedlines.push(line);
         }
     }
-    LSE_Logger.debug(`[Fennel-NG CalDAV] unfolded ${lines.length} lines to ${unfoldedlines.length} lines`);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] unfolded ' + lines.length + ' lines to ' + unfoldedlines.length + ' lines');
+    }
     return unfoldedlines;
 }
-function parseproperty(line)
-{
+function parseproperty(line) {
     if(line.indexOf(':') === -1) return null;
-    var colonindex = line.indexOf(':');
-    var proppart = line.substring(0, colonindex);
-    var valuepart = line.substring(colonindex + 1);
-    var propname = proppart;
-    var parameters = {};
+    const colonindex = line.indexOf(':');
+    const proppart = line.substring(0, colonindex);
+    const valuepart = line.substring(colonindex + 1);
+    let propname = proppart;
+    const parameters = {};
     if(proppart.indexOf(';') !== -1) {
-        var parts = proppart.split(';');
+        const parts = proppart.split(';');
         propname = parts[0];
-        for(var j = 1; j < parts.length; j++) {
-            var param = parts[j];
-            var eqindex = param.indexOf('=');
+        for(let j = 1; j < parts.length; j++) {
+            const param = parts[j];
+            const eqindex = param.indexOf('=');
             if(eqindex !== -1) {
-                var paramname = param.substring(0, eqindex);
-                var paramvalue = param.substring(eqindex + 1);
+                const paramname = param.substring(0, eqindex);
+                let paramvalue = param.substring(eqindex + 1);
                 if(paramvalue.charAt(0) === '"' && paramvalue.charAt(paramvalue.length - 1) === '"') {
                     paramvalue = paramvalue.substring(1, paramvalue.length - 1);
                 }
@@ -51,17 +54,18 @@ function parseproperty(line)
         parameters: parameters
     };
 }
-function parsecomponents(lines)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] parsecomponents called with ${lines.length} lines`);
-    var stack = [];
-    var current = null;
-    var root = null;
-    for(var i = 0; i < lines.length; i++) {
-        var prop = parseproperty(lines[i]);
+function parsecomponents(lines) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] parsecomponents called with ' + lines.length + ' lines');
+    }
+    const stack = [];
+    let current = null;
+    let root = null;
+    for(let i = 0; i < lines.length; i++) {
+        const prop = parseproperty(lines[i]);
         if(!prop) continue;
         if(prop.name === 'BEGIN') {
-            var newcomponent = {
+            const newcomponent = {
                 type: prop.value,
                 properties: {},
                 components: []
@@ -88,40 +92,56 @@ function parsecomponents(lines)
             });
         }
     }
-    LSE_Logger.debug(`[Fennel-NG CalDAV] parsecomponents completed, root type: ${root ? root.type : 'null'}`);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] parsecomponents completed, root type: ' + (root ? root.type : 'null'));
+    }
     return root;
 }
-function validateicsstructure(component)
-{
+function validateicsstructure(component) {
     if(!component) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] ics validation failed: null component`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] ics validation failed: null component');
+        }
         return false;
     }
     if(component.type !== 'VCALENDAR') {
-        LSE_Logger.error(`[Fennel-NG CalDAV] ics validation failed: root must be VCALENDAR, got ${component.type}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] ics validation failed: root must be VCALENDAR, got ' + component.type);
+        }
         return false;
     }
     if(!component.properties.VERSION || !component.properties.VERSION[0]) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] ics validation failed: missing VERSION property`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] ics validation failed: missing VERSION property');
+        }
         return false;
     }
     if(component.properties.VERSION[0].value !== '2.0') {
-        LSE_Logger.error(`[Fennel-NG CalDAV] ics validation failed: unsupported version ${component.properties.VERSION[0].value}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] ics validation failed: unsupported version ' + component.properties.VERSION[0].value);
+        }
         return false;
     }
-    LSE_Logger.debug(`[Fennel-NG CalDAV] ics structure validation passed`);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] ics structure validation passed');
+    }
     return true;
 }
-function parseics(icsdata)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] parseics starting`);
-    var lines = parseicslines(icsdata);
-    var component = parsecomponents(lines);
+function parseics(icsdata) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] parseics starting');
+    }
+    const lines = parseicslines(icsdata);
+    const component = parsecomponents(lines);
     if(!validateicsstructure(component)) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] parseics failed validation`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] parseics failed validation');
+        }
         return null;
     }
-    LSE_Logger.debug(`[Fennel-NG CalDAV] parseics completed successfully`);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] parseics completed successfully');
+    }
     return component;
 }
 module.exports = {
@@ -131,4 +151,3 @@ module.exports = {
     parsecomponents: parsecomponents,
     validateicsstructure: validateicsstructure
 };
-

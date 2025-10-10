@@ -1,58 +1,70 @@
-var config = require('../config').config;
-var redis = require('./redis');
-var ldapintegration = require('./ldap-integration');
-var jwt = require('jsonwebtoken');
-var fs = require('fs');
-var path = require('path');
-var { hash } = require('blake3-wasm');
-function checkLogin(basicauth, username, password, callback)
+const config = require('../config').config;
+const redis = require('./redis');
+const ldapintegration = require('./ldap-integration');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+function checklogin(basicauth, username, password, callback)
 {
-    LSE_Logger.debug(`[Fennel-NG Auth] Login process started for user: ${username}`);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG Auth] Login process started for user: ${username}`);
+    }
     switch(config.auth_method)
     {
         case 'ldap':
-            checkLDAP(username, password, callback);
+            checkldap(username, password, callback);
             break;
         case 'ldap_jwt':
-            checkLDAP(username, password, callback);
+            checkldap(username, password, callback);
             break;
         case 'jwt':
             callback(false);
             break;
         case 'htaccess':
-            checkHtaccess(basicauth, username, password, callback);
+            checkhtaccess(basicauth, username, password, callback);
             break;
         case 'courier':
-            checkCourier(username, password, callback);
+            checkcourier(username, password, callback);
             break;
         default:
-            LSE_Logger.warn(`[Fennel-NG Auth] No authentication method defined: ${config.auth_method}`);
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG Auth] No authentication method defined: ${config.auth_method}`);
+            }
             callback(false);
             break;
     }
 }
-async function checkLDAP(username, password, callback)
+async function checkldap(username, password, callback)
 {
-    LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with LDAP method: ${username}`);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with LDAP method: ${username}`);
+    }
     try
     {
-        var ldap_username = username.replace(/-/g, '@');
-        var caldav_username = username.replace(/@/g, '-');
-        LSE_Logger.debug(`[Fennel-NG Auth] LDAP username: ${ldap_username}, CalDAV username: ${caldav_username}`);
-        var cacheduser = await redis.getLDAPUser(ldap_username);
+        const ldap_username = username.replace(/-/g, '@');
+        const caldav_username = username.replace(/@/g, '-');
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG Auth] LDAP username: ${ldap_username}, CalDAV username: ${caldav_username}`);
+        }
+        const cacheduser = await redis.getldapuser(ldap_username);
         if(cacheduser)
         {
-            LSE_Logger.debug(`[Fennel-NG Auth] Using cached LDAP data for: ${ldap_username}`);
-            var argon2auth = require('./argon2-auth');
-            var passwordvalid = await argon2auth.verifyPassword(password, cacheduser.passwordHash);
+            if(config.LSE_Loglevel >= 2) {
+                LSE_Logger.debug(`[Fennel-NG Auth] Using cached LDAP data for: ${ldap_username}`);
+            }
+            const argon2auth = require('./argon2-auth');
+            const passwordvalid = await argon2auth.verifypassword(password, cacheduser.passwordHash);
             if(passwordvalid)
             {
-                var hasrequiredgroup = cacheduser.groups && cacheduser.groups.some(group =>
+                const hasrequiredgroup = cacheduser.groups && cacheduser.groups.some(group =>
                     group.cn === config.auth_method_ldap_required_group
                 );
                 if(hasrequiredgroup)
                 {
-                    LSE_Logger.info(`[Fennel-NG Auth] User authenticated from cache: ${ldap_username}`);
+                    if(config.LSE_Loglevel >= 1) {
+                        LSE_Logger.info(`[Fennel-NG Auth] User authenticated from cache: ${ldap_username}`);
+                    }
                     callback({
                         success: true,
                         method: 'ldap',
@@ -69,52 +81,64 @@ async function checkLDAP(username, password, callback)
                 }
                 else
                 {
-                    LSE_Logger.warn(`[Fennel-NG Auth] Cached user ${ldap_username} not in required group: ${config.auth_method_ldap_required_group}`);
+                    if(config.LSE_Loglevel >= 1) {
+                        LSE_Logger.warn(`[Fennel-NG Auth] Cached user ${ldap_username} not in required group: ${config.auth_method_ldap_required_group}`);
+                    }
                 }
             }
         }
-        var ldapclient = new ldapintegration(config);
-        var authresult = await ldapclient.authenticateUser(ldap_username, password);
+        const ldapclient = new ldapintegration(config);
+        const authresult = await ldapclient.authenticateuser(ldap_username, password);
         if(authresult.success)
         {
-            var hasrequiredgroup = authresult.groups.some(group =>
+            const hasrequiredgroup = authresult.groups.some(group =>
                 group.cn === config.auth_method_ldap_required_group
             );
             if(hasrequiredgroup)
             {
-                LSE_Logger.info(`[Fennel-NG Auth] User authenticated via LDAP: ${ldap_username}`);
-                var userdata = {
-                    username: ldap_username,
-                    groups: authresult.groups,
-                    passwordHash: authresult.user.passwordHash,
-                    displayName: authresult.user.displayName || ldap_username
-                };
-                await redis.cacheLDAPUser(ldap_username, userdata, 300);
+                if(!authresult.fromCache)
+                {
+                    const argon2auth = require('./argon2-auth');
+                    const passwordhash = await argon2auth.hashpassword(password);
+                    const userdata = {
+                        username: ldap_username,
+                        passwordHash: passwordhash,
+                        groups: authresult.groups,
+                        lastAuthenticated: Math.floor(Date.now() / 1000)
+                    };
+                    await redis.cacheldapuser(ldap_username, userdata, 300);
+                }
+                if(config.LSE_Loglevel >= 1) {
+                    LSE_Logger.info(`[Fennel-NG Auth] User authenticated via LDAP: ${ldap_username}`);
+                }
                 callback({
                     success: true,
                     method: 'ldap',
                     username: caldav_username,
                     ldap_username: ldap_username,
                     user: authresult.user,
-                    groups: authresult.groups,
                     authority: {
                         check: function(permission) {
                             return true;
                         }
                     }
                 });
+                return;
             }
             else
             {
-                LSE_Logger.warn(`[Fennel-NG Auth] User ${ldap_username} not in required group: ${config.auth_method_ldap_required_group}`);
-                callback(false);
+                if(config.LSE_Loglevel >= 1) {
+                    LSE_Logger.warn(`[Fennel-NG Auth] User ${ldap_username} not in required group: ${config.auth_method_ldap_required_group}`);
+                }
             }
         }
         else
         {
-            LSE_Logger.warn(`[Fennel-NG Auth] LDAP authentication failed for user: ${ldap_username}`);
-            callback(false);
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG Auth] LDAP authentication failed for ${ldap_username}: ${authresult.error}`);
+            }
         }
+        callback(false);
     }
     catch(error)
     {
@@ -122,34 +146,40 @@ async function checkLDAP(username, password, callback)
         callback(false);
     }
 }
-async function validateJWTToken(token)
+async function validatejwttoken(token)
 {
     try
     {
-        var isblacklisted = await redis.isJWTTokenBlacklisted(token);
+        const isblacklisted = await redis.isjwttokenblacklisted(token);
         if(isblacklisted)
         {
-            LSE_Logger.warn(`[Fennel-NG Auth] JWT token is blacklisted`);
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG Auth] JWT token is blacklisted`);
+            }
             return {
                 valid: false,
                 error: 'Token is blacklisted'
             };
         }
-        var cachedpayload = await redis.getJWTToken(token);
+        const cachedpayload = await redis.getjwttoken(token);
         if(cachedpayload)
         {
-            LSE_Logger.debug(`[Fennel-NG Auth] Using cached JWT token`);
+            if(config.LSE_Loglevel >= 2) {
+                LSE_Logger.debug(`[Fennel-NG Auth] Using cached JWT token`);
+            }
             return {
                 valid: true,
                 payload: cachedpayload,
-                fromcache: true
+                fromCache: true
             };
         }
-        var decoded = jwt.verify(token, config.jwt_secret);
-        var now = Math.floor(Date.now() / 1000);
+        const decoded = jwt.verify(token, config.jwt_secret);
+        const now = Math.floor(Date.now() / 1000);
         if(decoded.exp && decoded.exp < now)
         {
-            LSE_Logger.warn(`[Fennel-NG Auth] JWT token expired`);
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG Auth] JWT token expired`);
+            }
             return {
                 valid: false,
                 error: 'Token expired'
@@ -159,59 +189,63 @@ async function validateJWTToken(token)
         {
             if(!decoded.groups || !decoded.groups.includes(config.auth_method_ldap_required_group))
             {
-                LSE_Logger.warn(`[Fennel-NG Auth] JWT token user not in required group: ${config.auth_method_ldap_required_group}`);
+                if(config.LSE_Loglevel >= 1) {
+                    LSE_Logger.warn(`[Fennel-NG Auth] JWT token user not in required group: ${config.auth_method_ldap_required_group}`);
+                }
                 return {
                     valid: false,
                     error: `User not in required group: ${config.auth_method_ldap_required_group}`
                 };
             }
         }
-        var cacheexpiry = decoded.exp ?
-            (decoded.exp - now - 60) : (config.jwt_expiry_minutes * 60 - 300);
-        if(cacheexpiry > 0)
-        {
-            await redis.cacheJWTToken(token, decoded, cacheexpiry);
+        const cacheexpiry = decoded.exp ? (decoded.exp - now) : 3600;
+        await redis.cachejwttoken(token, decoded, cacheexpiry);
+        if(config.LSE_Loglevel >= 2) {
+            LSE_Logger.debug(`[Fennel-NG Auth] JWT token validated and cached`);
         }
-        LSE_Logger.debug(`[Fennel-NG Auth] JWT token validated successfully for user: ${decoded.username || decoded.sub}`);
         return {
             valid: true,
-            payload: decoded
+            payload: decoded,
+            fromCache: false
         };
     }
     catch(error)
     {
-        LSE_Logger.warn(`[Fennel-NG Auth] JWT token validation failed: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG Auth] JWT validation error: ${error.message}`);
         return {
             valid: false,
             error: error.message
         };
     }
 }
-async function extractJWTFromRequest(req)
+async function extractjwtfromrequest(req)
 {
     try
     {
-        var token = null;
-        if(req.headers.authorization)
+        let token = null;
+        const authheader = req.headers.authorization;
+        if(authheader && authheader.startsWith('Bearer '))
         {
-            var authheader = req.headers.authorization;
-            if(authheader.startsWith('Bearer '))
-            {
-                token = authheader.substring(7);
-                LSE_Logger.debug(`[Fennel-NG Auth] JWT token found in Authorization header`);
+            token = authheader.substring(7);
+            if(config.LSE_Loglevel >= 2) {
+                LSE_Logger.debug(`[Fennel-NG Auth] JWT token extracted from Authorization header`);
             }
+            return token;
         }
-        if(!token && req.headers.cookie)
+        const cookieheader = req.headers.cookie;
+        if(cookieheader)
         {
-            var cookies = req.headers.cookie.split(';');
-            for(var i = 0; i < cookies.length; i++)
+            const cookies = cookieheader.split(';');
+            for(let cookie of cookies)
             {
-                var cookie = cookies[i].trim();
-                if(cookie.startsWith(config.jwt_cookie_name + '='))
+                const [name, value] = cookie.trim().split('=');
+                if(name === 'LSE_token' && value)
                 {
-                    token = cookie.substring(config.jwt_cookie_name.length + 1);
-                    LSE_Logger.debug(`[Fennel-NG Auth] JWT token found in cookie: ${config.jwt_cookie_name}`);
-                    break;
+                    token = decodeURIComponent(value);
+                    if(config.LSE_Loglevel >= 2) {
+                        LSE_Logger.debug(`[Fennel-NG Auth] JWT token extracted from LSE_token cookie`);
+                    }
+                    return token;
                 }
             }
         }
@@ -223,45 +257,50 @@ async function extractJWTFromRequest(req)
         return null;
     }
 }
-async function authenticateRequest(req)
+async function authenticaterequest(req)
 {
     try
     {
-        var jwttoken = await extractJWTFromRequest(req);
+        const jwttoken = await extractjwtfromrequest(req);
         if(jwttoken)
         {
-            var jwtresult = await validateJWTToken(jwttoken);
+            const jwtresult = await validatejwttoken(jwttoken);
             if(jwtresult.valid)
             {
-                var username = jwtresult.payload.username || jwtresult.payload.sub;
-                var caldav_username = username.replace(/@/g, '-');
-                LSE_Logger.debug(`[Fennel-NG Auth] Request authenticated via JWT for user: ${username}`);
+                const username = jwtresult.payload.username || jwtresult.payload.sub;
+                const caldav_username = username.replace(/@/g, '-');
+                if(config.LSE_Loglevel >= 2) {
+                    LSE_Logger.debug(`[Fennel-NG Auth] Request authenticated via JWT for user: ${username}`);
+                }
                 return {
                     success: true,
                     method: 'jwt',
                     username: caldav_username,
                     ldap_username: username,
-                    payload: jwtresult.payload,
-                    token: jwttoken
+                    payload: jwtresult.payload
                 };
             }
             else
             {
-                LSE_Logger.warn(`[Fennel-NG Auth] JWT authentication failed: ${jwtresult.error}`);
+                if(config.LSE_Loglevel >= 1) {
+                    LSE_Logger.warn(`[Fennel-NG Auth] JWT authentication failed: ${jwtresult.error}`);
+                }
             }
         }
-        var authheader = req.headers.authorization;
+        const authheader = req.headers.authorization;
         if(authheader && authheader.startsWith('Basic '))
         {
-            var credentials = Buffer.from(authheader.substring(6), 'base64').toString();
-            var [username, password] = credentials.split(':');
+            const credentials = Buffer.from(authheader.substring(6), 'base64').toString();
+            const [username, password] = credentials.split(':');
             if(username && password)
             {
                 return new Promise((resolve) => {
-                    checkLogin(null, username, password, function(success) {
+                    checklogin(null, username, password, function(success) {
                         if(success)
                         {
-                            LSE_Logger.debug(`[Fennel-NG Auth] Request authenticated via Basic Auth for user: ${username}`);
+                            if(config.LSE_Loglevel >= 2) {
+                                LSE_Logger.debug(`[Fennel-NG Auth] Request authenticated via Basic Auth for user: ${username}`);
+                            }
                             resolve({
                                 success: true,
                                 method: 'basic',
@@ -271,7 +310,9 @@ async function authenticateRequest(req)
                         }
                         else
                         {
-                            LSE_Logger.warn(`[Fennel-NG Auth] Basic authentication failed for user: ${username}`);
+                            if(config.LSE_Loglevel >= 1) {
+                                LSE_Logger.warn(`[Fennel-NG Auth] Basic authentication failed for user: ${username}`);
+                            }
                             resolve({
                                 success: false,
                                 error: 'Invalid credentials'
@@ -281,7 +322,9 @@ async function authenticateRequest(req)
                 });
             }
         }
-        LSE_Logger.warn(`[Fennel-NG Auth] No valid authentication found in request`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.warn(`[Fennel-NG Auth] No valid authentication found in request`);
+        }
         return {
             success: false,
             error: 'No authentication provided'
@@ -296,14 +339,16 @@ async function authenticateRequest(req)
         };
     }
 }
-async function blacklistJWTToken(token)
+async function blacklistjwttoken(token)
 {
     try
     {
-        var decoded = jwt.decode(token);
-        var expiryseconds = decoded && decoded.exp ? (decoded.exp - Math.floor(Date.now() / 1000)) : 86400;
-        await redis.blacklistJWTToken(token, expiryseconds);
-        LSE_Logger.info(`[Fennel-NG Auth] JWT token blacklisted`);
+        const decoded = jwt.decode(token);
+        const expiryseconds = decoded && decoded.exp ? (decoded.exp - Math.floor(Date.now() / 1000)) : 86400;
+        await redis.blacklistjwttoken(token, expiryseconds);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.info(`[Fennel-NG Auth] JWT token blacklisted`);
+        }
         return true;
     }
     catch(error)
@@ -312,95 +357,148 @@ async function blacklistJWTToken(token)
         return false;
     }
 }
-function checkHtaccess(basicauth, username, password, callback)
+function checkhtaccess(basicauth, username, password, callback)
 {
-    LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with htaccess method: ${username}`);
-    var fhtaccess = path.resolve('.', config.auth_method_htaccess_file);
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with htaccess method: ${username}`);
+    }
+    const fhtaccess = path.resolve('.', config.auth_method_htaccess_file);
     if(!fs.existsSync(fhtaccess))
     {
-        LSE_Logger.warn(`[Fennel-NG Auth] File not found for htaccess authentication: ${fhtaccess}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.warn(`[Fennel-NG Auth] File not found for htaccess authentication: ${fhtaccess}`);
+        }
         callback(false);
         return;
     }
-    var strhtaccess = fs.readFileSync(fhtaccess, 'utf8');
-    var lines = strhtaccess.replace(/\r\n/g, "\n").split("\n");
-    for (var i in lines)
+    const strhtaccess = fs.readFileSync(fhtaccess, 'utf8');
+    const lines = strhtaccess.replace(/\r\n/g, "\n").split("\n");
+    for (let i in lines)
     {
-        var line = lines[i];
+        const line = lines[i];
         if(line.length > 0)
         {
-            var ret = processLine(line);
+            const ret = processline(line);
             if(ret.username == username)
             {
                 if(basicauth.validate(ret.passwordhash, password))
                 {
-                    LSE_Logger.info(`[Fennel-NG Auth] User authenticated via htaccess: ${username}`);
+                    if(config.LSE_Loglevel >= 1) {
+                        LSE_Logger.info(`[Fennel-NG Auth] User authenticated via htaccess: ${username}`);
+                    }
                     callback(true);
                     return;
                 }
             }
         }
     }
-    LSE_Logger.warn(`[Fennel-NG Auth] Htaccess authentication failed for user: ${username}`);
+    if(config.LSE_Loglevel >= 1) {
+        LSE_Logger.warn(`[Fennel-NG Auth] Htaccess authentication failed for user: ${username}`);
+    }
     callback(false);
 }
-function processLine(line)
+function processline(line)
 {
-    var pwdhash, linesplit, username;
+    let pwdhash, linesplit, username;
     linesplit = line.split(":");
     username = linesplit.shift();
     pwdhash = linesplit.join(":");
-                return new htaccessLine(username, pwdhash);
+    return new htaccessline(username, pwdhash);
 }
-function htaccessLine(user, hash)
+function htaccessline(user, hash)
 {
     this.username = user;
     this.passwordhash = hash;
 }
-function checkCourier(username, password, callback)
+function checkcourier(username, password, callback)
 {
-    LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with courier method: ${username}`);
-    var fcourier = path.resolve('.', config.auth_method_courier_socket);
-    if(!fs.existsSync(fcourier))
-    {
-        LSE_Logger.warn(`[Fennel-NG Auth] Socket not found for courier authentication: ${fcourier}`);
-        callback(false);
-        return;
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG Auth] Authenticating user with courier method: ${username}`);
     }
-    var net = require('net');
-    var socket = net.connect(fcourier);
-    socket.on('connect', function()
-    {
-        socket.write('AUTH ' + Buffer.from(username + '\n' + password + '\n').toString('hex') + '\n');
+    const net = require('net');
+    const socketpath = config.auth_method_courier_socket;
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug(`[Fennel-NG Auth] Using courier socket: ${socketpath}`);
+    }
+    const client = net.createConnection({path: socketpath});
+    client.on("connect", function() {
+        const payload = 'service\nlogin\n' + username + '\n' + password;
+        client.write('AUTH ' + payload.length + '\n' + payload);
     });
-    socket.on('data', function(data)
-    {
-        var response = data.toString();
-        if(response.indexOf('FAIL') === -1)
+    let response = "";
+    client.on("data", function(data) {
+        response += data.toString();
+    });
+    client.on('end', function() {
+        const result = response.indexOf('FAIL', 0);
+        const success = result < 0;
+        if(success)
         {
-            LSE_Logger.info(`[Fennel-NG Auth] User authenticated via courier: ${username}`);
-            callback(true);
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.info(`[Fennel-NG Auth] User authenticated via courier: ${username}`);
+            }
         }
         else
         {
-            LSE_Logger.warn(`[Fennel-NG Auth] Courier authentication failed for user: ${username}`);
-            callback(false);
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn(`[Fennel-NG Auth] Courier authentication failed for user: ${username}`);
+            }
         }
-        socket.end();
+        callback(success);
     });
-    socket.on('error', function(error)
-    {
-        LSE_Logger.error(`[Fennel-NG Auth] Courier socket error: ${error.message}`);
+    client.on('error', function(error) {
+        LSE_Logger.error(`[Fennel-NG Auth] Courier authentication error: ${error.message}`);
         callback(false);
     });
 }
+async function healthcheck()
+{
+    try
+    {
+        let ldaphealth = { available: false };
+        const redishealth = await redis.healthcheck();
+        if(config.auth_method === 'ldap' || config.auth_method === 'ldap_jwt')
+        {
+            try
+            {
+                const ldapclient = new ldapintegration(config);
+                const connectionresult = await ldapclient.testconnection();
+                ldaphealth = {
+                    available: connectionresult.success,
+                    error: connectionresult.error
+                };
+            }
+            catch(error)
+            {
+                ldaphealth = {
+                    available: false,
+                    error: error.message
+                };
+            }
+        }
+        return {
+            status: 'ok',
+            method: config.auth_method,
+            ldap: ldaphealth,
+            redis: redishealth,
+            jwt_enabled: config.auth_method.includes('jwt')
+        };
+    }
+    catch(error)
+    {
+        return {
+            status: 'error',
+            error: error.message
+        };
+    }
+}
 module.exports = {
-    checkLogin: checkLogin,
-    checkLDAP: checkLDAP,
-    validateJWTToken: validateJWTToken,
-    extractJWTFromRequest: extractJWTFromRequest,
-    authenticateRequest: authenticateRequest,
-    blacklistJWTToken: blacklistJWTToken,
-    checkHtaccess: checkHtaccess,
-    checkCourier: checkCourier
+    checklogin: checklogin,
+    checkldap: checkldap,
+    validatejwttoken: validatejwttoken,
+    extractjwtfromrequest: extractjwtfromrequest,
+    authenticaterequest: authenticaterequest,
+    blacklistjwttoken: blacklistjwttoken,
+    healthcheck: healthcheck
 };
+

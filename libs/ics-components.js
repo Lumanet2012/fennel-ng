@@ -1,40 +1,108 @@
-function processvcalendar(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] processing VCALENDAR component`);
-    var processed = {
+const config = require('../config').config;
+function getpropertyvalue(component, propname) {
+    if(!component.properties || !component.properties[propname] || !component.properties[propname][0]) {
+        return null;
+    }
+    return component.properties[propname][0].value;
+}
+function getpropertywithparams(component, propname) {
+    if(!component.properties || !component.properties[propname] || !component.properties[propname][0]) {
+        return null;
+    }
+    return {
+        value: component.properties[propname][0].value,
+        parameters: component.properties[propname][0].parameters
+    };
+}
+function getmultipleproperties(component, propname) {
+    if(!component.properties || !component.properties[propname]) {
+        return [];
+    }
+    const props = [];
+    for(let i = 0; i < component.properties[propname].length; i++) {
+        props.push({
+            value: component.properties[propname][i].value,
+            parameters: component.properties[propname][i].parameters
+        });
+    }
+    return props;
+}
+function processcomponent(component) {
+    if(!component || !component.type) {
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] invalid component for processing');
+        }
+        return null;
+    }
+    switch(component.type) {
+        case 'VCALENDAR':
+            return processvcalendar(component);
+        case 'VEVENT':
+            return processvevent(component);
+        case 'VTODO':
+            return processvtodo(component);
+        case 'VJOURNAL':
+            return processvjournal(component);
+        case 'VTIMEZONE':
+            return processvtimezone(component);
+        case 'VFREEBUSY':
+            return processvfreebusy(component);
+        case 'VALARM':
+            return processvalarm(component);
+        default:
+            if(config.LSE_Loglevel >= 1) {
+                LSE_Logger.warn('[Fennel-NG CalDAV] unknown component type: ' + component.type);
+            }
+            return component;
+    }
+}
+function processvcalendar(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] processing VCALENDAR component');
+    }
+    const processed = {
         type: 'VCALENDAR',
         version: getpropertyvalue(component, 'VERSION'),
         prodid: getpropertyvalue(component, 'PRODID'),
-        calscale: getpropertyvalue(component, 'CALSCALE') || 'GREGORIAN',
+        calscale: getpropertyvalue(component, 'CALSCALE'),
         method: getpropertyvalue(component, 'METHOD'),
         events: [],
         todos: [],
         journals: [],
-        timezones: [],
-        freebusys: []
+        freebusys: [],
+        timezones: []
     };
     if(component.components) {
-        for(var i = 0; i < component.components.length; i++) {
-            var subcomponent = component.components[i];
-            if(subcomponent.type === 'VEVENT') {
-                processed.events.push(processvevent(subcomponent));
-            } else if(subcomponent.type === 'VTODO') {
-                processed.todos.push(processvtodo(subcomponent));
-            } else if(subcomponent.type === 'VJOURNAL') {
-                processed.journals.push(processvjournal(subcomponent));
-            } else if(subcomponent.type === 'VTIMEZONE') {
-                processed.timezones.push(processvtimezone(subcomponent));
-            } else if(subcomponent.type === 'VFREEBUSY') {
-                processed.freebusys.push(processvfreebusy(subcomponent));
+        for(let i = 0; i < component.components.length; i++) {
+            const subcomponent = component.components[i];
+            const processedsubcomponent = processcomponent(subcomponent);
+            if(!processedsubcomponent) continue;
+            switch(processedsubcomponent.type) {
+                case 'VEVENT':
+                    processed.events.push(processedsubcomponent);
+                    break;
+                case 'VTODO':
+                    processed.todos.push(processedsubcomponent);
+                    break;
+                case 'VJOURNAL':
+                    processed.journals.push(processedsubcomponent);
+                    break;
+                case 'VFREEBUSY':
+                    processed.freebusys.push(processedsubcomponent);
+                    break;
+                case 'VTIMEZONE':
+                    processed.timezones.push(processedsubcomponent);
+                    break;
             }
         }
     }
     return processed;
 }
-function processvevent(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] processing VEVENT component`);
-    var processed = {
+function processvevent(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] processing VEVENT component');
+    }
+    const processed = {
         type: 'VEVENT',
         uid: getpropertyvalue(component, 'UID'),
         dtstart: getpropertywithparams(component, 'DTSTART'),
@@ -44,8 +112,8 @@ function processvevent(component)
         description: getpropertyvalue(component, 'DESCRIPTION'),
         location: getpropertyvalue(component, 'LOCATION'),
         status: getpropertyvalue(component, 'STATUS'),
-        transp: getpropertyvalue(component, 'TRANSP'),
         class: getpropertyvalue(component, 'CLASS'),
+        transp: getpropertyvalue(component, 'TRANSP'),
         priority: getpropertyvalue(component, 'PRIORITY'),
         sequence: getpropertyvalue(component, 'SEQUENCE'),
         created: getpropertywithparams(component, 'CREATED'),
@@ -64,8 +132,8 @@ function processvevent(component)
         alarms: []
     };
     if(component.components) {
-        for(var i = 0; i < component.components.length; i++) {
-            var subcomponent = component.components[i];
+        for(let i = 0; i < component.components.length; i++) {
+            const subcomponent = component.components[i];
             if(subcomponent.type === 'VALARM') {
                 processed.alarms.push(processvalarm(subcomponent));
             }
@@ -73,10 +141,11 @@ function processvevent(component)
     }
     return processed;
 }
-function processvtodo(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] processing VTODO component`);
-    var processed = {
+function processvtodo(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] processing VTODO component');
+    }
+    const processed = {
         type: 'VTODO',
         uid: getpropertyvalue(component, 'UID'),
         dtstart: getpropertywithparams(component, 'DTSTART'),
@@ -106,8 +175,8 @@ function processvtodo(component)
         alarms: []
     };
     if(component.components) {
-        for(var i = 0; i < component.components.length; i++) {
-            var subcomponent = component.components[i];
+        for(let i = 0; i < component.components.length; i++) {
+            const subcomponent = component.components[i];
             if(subcomponent.type === 'VALARM') {
                 processed.alarms.push(processvalarm(subcomponent));
             }
@@ -115,9 +184,10 @@ function processvtodo(component)
     }
     return processed;
 }
-function processvjournal(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] processing VJOURNAL component`);
+function processvjournal(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] processing VJOURNAL component');
+    }
     return {
         type: 'VJOURNAL',
         uid: getpropertyvalue(component, 'UID'),
@@ -136,10 +206,11 @@ function processvjournal(component)
         attachments: getmultipleproperties(component, 'ATTACH')
     };
 }
-function processvtimezone(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] processing VTIMEZONE component`);
-    var processed = {
+function processvtimezone(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] processing VTIMEZONE component');
+    }
+    const processed = {
         type: 'VTIMEZONE',
         tzid: getpropertyvalue(component, 'TZID'),
         lastmodified: getpropertywithparams(component, 'LAST-MODIFIED'),
@@ -148,8 +219,8 @@ function processvtimezone(component)
         daylights: []
     };
     if(component.components) {
-        for(var i = 0; i < component.components.length; i++) {
-            var subcomponent = component.components[i];
+        for(let i = 0; i < component.components.length; i++) {
+            const subcomponent = component.components[i];
             if(subcomponent.type === 'STANDARD') {
                 processed.standards.push(processtimezonecomponent(subcomponent));
             } else if(subcomponent.type === 'DAYLIGHT') {
@@ -159,8 +230,7 @@ function processvtimezone(component)
     }
     return processed;
 }
-function processtimezonecomponent(component)
-{
+function processtimezonecomponent(component) {
     return {
         type: component.type,
         dtstart: getpropertywithparams(component, 'DTSTART'),
@@ -171,9 +241,10 @@ function processtimezonecomponent(component)
         rdate: getmultipleproperties(component, 'RDATE')
     };
 }
-function processvfreebusy(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] processing VFREEBUSY component`);
+function processvfreebusy(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] processing VFREEBUSY component');
+    }
     return {
         type: 'VFREEBUSY',
         uid: getpropertyvalue(component, 'UID'),
@@ -186,9 +257,10 @@ function processvfreebusy(component)
         freebusy: getmultipleproperties(component, 'FREEBUSY')
     };
 }
-function processvalarm(component)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] processing VALARM component`);
+function processvalarm(component) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] processing VALARM component');
+    }
     return {
         type: 'VALARM',
         action: getpropertyvalue(component, 'ACTION'),
@@ -200,63 +272,6 @@ function processvalarm(component)
         attendees: getmultipleproperties(component, 'ATTENDEE'),
         attachments: getmultipleproperties(component, 'ATTACH')
     };
-}
-function getpropertyvalue(component, propname)
-{
-    if(!component.properties || !component.properties[propname] || !component.properties[propname][0]) {
-        return null;
-    }
-    return component.properties[propname][0].value;
-}
-function getpropertywithparams(component, propname)
-{
-    if(!component.properties || !component.properties[propname] || !component.properties[propname][0]) {
-        return null;
-    }
-    return {
-        value: component.properties[propname][0].value,
-        parameters: component.properties[propname][0].parameters
-    };
-}
-function getmultipleproperties(component, propname)
-{
-    if(!component.properties || !component.properties[propname]) {
-        return [];
-    }
-    var props = [];
-    for(var i = 0; i < component.properties[propname].length; i++) {
-        props.push({
-            value: component.properties[propname][i].value,
-            parameters: component.properties[propname][i].parameters
-        });
-    }
-    return props;
-}
-function processcomponent(component)
-{
-    if(!component || !component.type) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] invalid component for processing`);
-        return null;
-    }
-    switch(component.type) {
-        case 'VCALENDAR':
-            return processvcalendar(component);
-        case 'VEVENT':
-            return processvevent(component);
-        case 'VTODO':
-            return processvtodo(component);
-        case 'VJOURNAL':
-            return processvjournal(component);
-        case 'VTIMEZONE':
-            return processvtimezone(component);
-        case 'VFREEBUSY':
-            return processvfreebusy(component);
-        case 'VALARM':
-            return processvalarm(component);
-        default:
-            LSE_Logger.warn(`[Fennel-NG CalDAV] unknown component type: ${component.type}`);
-            return component;
-    }
 }
 module.exports = {
     processcomponent: processcomponent,

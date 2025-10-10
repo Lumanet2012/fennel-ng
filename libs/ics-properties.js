@@ -1,24 +1,26 @@
-function parsedatetime(datestr, parameters)
-{
+const config = require('../config').config;
+function parsedatetime(datestr, parameters) {
     if(!datestr || datestr.length < 8) return null;
-    var year = parseInt(datestr.substr(0, 4));
-    var month = parseInt(datestr.substr(4, 2)) - 1;
-    var day = parseInt(datestr.substr(6, 2));
-    var hour = 0;
-    var minute = 0;
-    var second = 0;
-    var isdate = true;
+    const year = parseInt(datestr.substr(0, 4));
+    const month = parseInt(datestr.substr(4, 2)) - 1;
+    const day = parseInt(datestr.substr(6, 2));
+    let hour = 0;
+    let minute = 0;
+    let second = 0;
+    let isdate = true;
     if(datestr.length > 8 && datestr.charAt(8) === 'T') {
         isdate = false;
         hour = parseInt(datestr.substr(9, 2)) || 0;
         minute = parseInt(datestr.substr(11, 2)) || 0;
         second = parseInt(datestr.substr(13, 2)) || 0;
     }
-    var isutc = datestr.charAt(datestr.length - 1) === 'Z';
-    var tzid = parameters && parameters.TZID ? parameters.TZID : null;
-    var date = new Date(Date.UTC(year, month, day, hour, minute, second));
+    const isutc = datestr.charAt(datestr.length - 1) === 'Z';
+    const tzid = parameters && parameters.TZID ? parameters.TZID : null;
+    const date = new Date(Date.UTC(year, month, day, hour, minute, second));
     if(isNaN(date.getTime())) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] invalid date: ${datestr}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] invalid date: ' + datestr);
+        }
         return null;
     }
     return {
@@ -35,16 +37,15 @@ function parsedatetime(datestr, parameters)
         date: date
     };
 }
-function parserrule(rrulestr)
-{
-    var parts = rrulestr.split(';');
-    var rrule = {};
-    for(var i = 0; i < parts.length; i++) {
-        var part = parts[i];
-        var eqindex = part.indexOf('=');
+function parserrule(rrulestr) {
+    const parts = rrulestr.split(';');
+    const rrule = {};
+    for(let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        const eqindex = part.indexOf('=');
         if(eqindex !== -1) {
-            var key = part.substring(0, eqindex);
-            var value = part.substring(eqindex + 1);
+            const key = part.substring(0, eqindex);
+            const value = part.substring(eqindex + 1);
             switch(key) {
                 case 'FREQ':
                     rrule.freq = value;
@@ -93,20 +94,21 @@ function parserrule(rrulestr)
     }
     return rrule;
 }
-function parseduration(durationstr)
-{
-    var match = durationstr.match(/^([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
+function parseduration(durationstr) {
+    const match = durationstr.match(/^([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
     if(!match) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] invalid duration: ${durationstr}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] invalid duration: ' + durationstr);
+        }
         return null;
     }
-    var sign = match[1] === '-' ? -1 : 1;
-    var weeks = parseInt(match[2]) || 0;
-    var days = parseInt(match[3]) || 0;
-    var hours = parseInt(match[4]) || 0;
-    var minutes = parseInt(match[5]) || 0;
-    var seconds = parseInt(match[6]) || 0;
-    var totalseconds = sign * (weeks * 604800 + days * 86400 + hours * 3600 + minutes * 60 + seconds);
+    const sign = match[1] === '-' ? -1 : 1;
+    const weeks = parseInt(match[2]) || 0;
+    const days = parseInt(match[3]) || 0;
+    const hours = parseInt(match[4]) || 0;
+    const minutes = parseInt(match[5]) || 0;
+    const seconds = parseInt(match[6]) || 0;
+    const totalseconds = sign * (weeks * 604800 + days * 86400 + hours * 3600 + minutes * 60 + seconds);
     return {
         sign: sign,
         weeks: weeks,
@@ -117,8 +119,7 @@ function parseduration(durationstr)
         totalseconds: totalseconds
     };
 }
-function parsetrigger(triggerstr, parameters)
-{
+function parsetrigger(triggerstr, parameters) {
     if(triggerstr.charAt(0) === '-' || triggerstr.charAt(0) === '+' || triggerstr.charAt(0) === 'P') {
         return {
             type: 'duration',
@@ -132,12 +133,11 @@ function parsetrigger(triggerstr, parameters)
         };
     }
 }
-function parsegeo(geostr)
-{
-    var parts = geostr.split(';');
+function parsegeo(geostr) {
+    const parts = geostr.split(';');
     if(parts.length === 2) {
-        var lat = parseFloat(parts[0]);
-        var lon = parseFloat(parts[1]);
+        const lat = parseFloat(parts[0]);
+        const lon = parseFloat(parts[1]);
         if(!isNaN(lat) && !isNaN(lon)) {
             return {
                 lat: lat,
@@ -145,24 +145,24 @@ function parsegeo(geostr)
             };
         }
     }
-    LSE_Logger.error(`[Fennel-NG CalDAV] invalid geo: ${geostr}`);
+    if(config.LSE_Loglevel >= 1) {
+        LSE_Logger.error('[Fennel-NG CalDAV] invalid geo: ' + geostr);
+    }
     return null;
 }
-function parsedatelist(dateliststr, parameters)
-{
-    var dates = dateliststr.split(',');
-    var parseddates = [];
-    for(var i = 0; i < dates.length; i++) {
-        var parsed = parsedatetime(dates[i], parameters);
+function parsedatelist(dateliststr, parameters) {
+    const dates = dateliststr.split(',');
+    const parseddates = [];
+    for(let i = 0; i < dates.length; i++) {
+        const parsed = parsedatetime(dates[i], parameters);
         if(parsed) {
             parseddates.push(parsed);
         }
     }
     return parseddates;
 }
-function parseattendee(attendeestr, parameters)
-{
-    var email = attendeestr.replace(/^mailto:/i, '');
+function parseattendee(attendeestr, parameters) {
+    const email = attendeestr.replace(/^mailto:/i, '');
     return {
         email: email,
         cn: parameters && parameters.CN ? parameters.CN : null,
@@ -178,9 +178,8 @@ function parseattendee(attendeestr, parameters)
         language: parameters && parameters.LANGUAGE ? parameters.LANGUAGE : null
     };
 }
-function parseorganizer(organizerstr, parameters)
-{
-    var email = organizerstr.replace(/^mailto:/i, '');
+function parseorganizer(organizerstr, parameters) {
+    const email = organizerstr.replace(/^mailto:/i, '');
     return {
         email: email,
         cn: parameters && parameters.CN ? parameters.CN : null,
@@ -189,8 +188,7 @@ function parseorganizer(organizerstr, parameters)
         language: parameters && parameters.LANGUAGE ? parameters.LANGUAGE : null
     };
 }
-function parseattachment(attachstr, parameters)
-{
+function parseattachment(attachstr, parameters) {
     if(attachstr.match(/^https?:/i)) {
         return {
             type: 'uri',
@@ -210,15 +208,16 @@ function parseattachment(attachstr, parameters)
         };
     }
 }
-function parseperiod(periodstr)
-{
-    var parts = periodstr.split('/');
+function parseperiod(periodstr) {
+    const parts = periodstr.split('/');
     if(parts.length !== 2) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] invalid period: ${periodstr}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] invalid period: ' + periodstr);
+        }
         return null;
     }
-    var start = parsedatetime(parts[0], {});
-    var endduration = parts[1];
+    const start = parsedatetime(parts[0], {});
+    const endduration = parts[1];
     if(endduration.charAt(0) === 'P') {
         return {
             start: start,
@@ -231,13 +230,12 @@ function parseperiod(periodstr)
         };
     }
 }
-function parsefreebusy(freebusystr, parameters)
-{
-    var fbtype = parameters && parameters.FBTYPE ? parameters.FBTYPE : 'BUSY';
-    var periods = freebusystr.split(',');
-    var parsedperiods = [];
-    for(var i = 0; i < periods.length; i++) {
-        var period = parseperiod(periods[i]);
+function parsefreebusy(freebusystr, parameters) {
+    const fbtype = parameters && parameters.FBTYPE ? parameters.FBTYPE : 'BUSY';
+    const periods = freebusystr.split(',');
+    const parsedperiods = [];
+    for(let i = 0; i < periods.length; i++) {
+        const period = parseperiod(periods[i]);
         if(period) {
             parsedperiods.push(period);
         }
@@ -247,18 +245,19 @@ function parsefreebusy(freebusystr, parameters)
         periods: parsedperiods
     };
 }
-function parseoffset(offsetstr)
-{
-    var match = offsetstr.match(/^([+-])(\d{2})(\d{2})(?:(\d{2}))?$/);
+function parseoffset(offsetstr) {
+    const match = offsetstr.match(/^([+-])(\d{2})(\d{2})(?:(\d{2}))?$/);
     if(!match) {
-        LSE_Logger.error(`[Fennel-NG CalDAV] invalid offset: ${offsetstr}`);
+        if(config.LSE_Loglevel >= 1) {
+            LSE_Logger.error('[Fennel-NG CalDAV] invalid offset: ' + offsetstr);
+        }
         return null;
     }
-    var sign = match[1] === '+' ? 1 : -1;
-    var hours = parseInt(match[2]);
-    var minutes = parseInt(match[3]);
-    var seconds = parseInt(match[4]) || 0;
-    var totalseconds = sign * (hours * 3600 + minutes * 60 + seconds);
+    const sign = match[1] === '+' ? 1 : -1;
+    const hours = parseInt(match[2]);
+    const minutes = parseInt(match[3]);
+    const seconds = parseInt(match[4]) || 0;
+    const totalseconds = sign * (hours * 3600 + minutes * 60 + seconds);
     return {
         sign: sign,
         hours: hours,
@@ -268,9 +267,10 @@ function parseoffset(offsetstr)
         string: offsetstr
     };
 }
-function parseproperty(propname, propvalue, parameters)
-{
-    LSE_Logger.debug(`[Fennel-NG CalDAV] parsing property ${propname}`);
+function parseproperty(propname, propvalue, parameters) {
+    if(config.LSE_Loglevel >= 2) {
+        LSE_Logger.debug('[Fennel-NG CalDAV] parsing property ' + propname);
+    }
     switch(propname) {
         case 'DTSTART':
         case 'DTEND':

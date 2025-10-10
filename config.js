@@ -38,6 +38,7 @@ var config =
     public_route_prefix: '/api/fennel-ng',
     port: 8888,
     ip: '10.0.0.11',
+    LSE_Loglevel: 2 ,   // 0= none , 1= info, 2= full debug
     db_name: 'lse_cal',
     db_uid: 'LSE-Admin',
     db_pwd: 'LSE-@dm1n',
