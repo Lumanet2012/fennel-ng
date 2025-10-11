@@ -63,7 +63,7 @@ function propfind(comm){
 }
 function handlepropfindforuser(comm){
     if(config.LSE_Loglevel>=2){
-        LSE_Logger.debug(`[Fennel-NG CalDAV] handlePropfindForUser`);
+        LSE_Logger.debug(`[Fennel-NG CalDAV] handlepropfindforuser`);
     }
     comm.setstandardheaders();
     comm.setdavheaders();
@@ -80,9 +80,9 @@ function handlepropfindforuser(comm){
     calendars.findAndCountAll({where:{principaluri:principaluri}}).then(function(result){
         let response="";
         response+="<d:response>"+config.xml_lineend;
-        response+="<d:href>"+comm.geturl()+"</d:href>"+config.xml_lineend;
-        response+="<d:propstat>"+config.xml_lineend;
-        response+="<d:prop>"+config.xml_lineend;
+        response+="<d:href>" + comm.geturl() + "</d:href>"+config.xml_lineend;
+        response+="<d:propstat>" + config.xml_lineend;
+        response+="<d:prop>" + config.xml_lineend;
         const len=requestedprops.length;
         for(let i=0;i<len;i++){
             const prop=requestedprops[i];
@@ -105,11 +105,11 @@ function handlepropfindforuser(comm){
                     break;
                 case 'owner':
                 case 'D:owner':
-                    response+="<d:owner><d:href>"+comm.getprincipalurl()+"</d:href></d:owner>"+config.xml_lineend;
+                    response += "<d:owner><d:href>" + comm.getprincipalurl() + "</d:href></d:owner>" + config.xml_lineend;
                     break;
                 case 'calendar-home-set':
                 case 'C:calendar-home-set':
-                    response+="<cal:calendar-home-set><d:href>"+comm.getcalendarurl()+"</d:href></cal:calendar-home-set>"+config.xml_lineend;
+                    response += "<cal:calendar-home-set><d:href>" + comm.getcalendarurl() + "</d:href></cal:calendar-home-set>" + config.xml_lineend;
                     break;
                 case 'calendar-color':
                 case 'A:calendar-color':
@@ -118,18 +118,18 @@ function handlepropfindforuser(comm){
                     break;
             }
         }
-        response+="</d:prop>"+config.xml_lineend;
-        response+="<d:status>HTTP/1.1 200 OK</d:status>"+config.xml_lineend;
-        response+="</d:propstat>"+config.xml_lineend;
-        response+="</d:response>"+config.xml_lineend;
+        response += "</d:prop>" + config.xml_lineend;
+        response += "<d:status>HTTP/1.1 200 OK</d:status>" + config.xml_lineend;
+        response += "</d:propstat>" + config.xml_lineend;
+        response += "</d:response>" + config.xml_lineend;
         for(let i=0;i<result.count;++i){
             const calendar=result.rows[i];
             response+=returncalendar(comm,calendar,requestedprops);
         }
-        response+=calendarutil.returnoutbox(comm);
-        response+=calendarutil.returnnotifications(comm);
-        response+="</d:multistatus>"+config.xml_lineend;
-        comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">"+config.xml_lineend);
+        response += calendarutil.returnoutbox(comm);
+        response += calendarutil.returnnotifications(comm);
+        response += "</d:multistatus>" + config.xml_lineend;
+        comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">" + config.xml_lineend);
         comm.appendresbody(response);
         comm.flushresponse();
     });
@@ -143,7 +143,7 @@ function handlepropfindforcalendarinbox(comm){
     comm.setresponsecode(207);
     comm.appendresbody(xh.getXMLHead());
     comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">"+config.xml_lineend);
-    comm.appendresbody("<d:response><d:href>"+comm.geturl()+"</d:href>"+config.xml_lineend);
+    comm.appendresbody("<d:response><d:href>" + comm.geturl() + "</d:href>"+config.xml_lineend);
     comm.appendresbody("<d:propstat>"+config.xml_lineend);
     comm.appendresbody("<d:status>HTTP/1.1 200 OK</d:status>"+config.xml_lineend);
     comm.appendresbody("</d:propstat>"+config.xml_lineend);
@@ -172,7 +172,7 @@ function handlepropfindforcalendarnotifications(comm){
     comm.setresponsecode(207);
     comm.appendresbody(xh.getXMLHead());
     comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">"+config.xml_lineend);
-    comm.appendresbody("<d:response><d:href>"+comm.geturl()+"</d:href>"+config.xml_lineend);
+    comm.appendresbody("<d:response><d:href>" + comm.geturl() + "</d:href>"+config.xml_lineend);
     comm.appendresbody("<d:propstat>"+config.xml_lineend);
     comm.appendresbody("<d:status>HTTP/1.1 200 OK</d:status>"+config.xml_lineend);
     comm.appendresbody("</d:propstat>"+config.xml_lineend);
@@ -296,14 +296,14 @@ function returnpropfindelements(comm,calendar,childs,synctoken){
                 response+="<d:displayname>"+(calendar.displayname||"Main Calendar")+"</d:displayname>"+config.xml_lineend;
                 break;
             case 'getctag':
-                response+="<cs:getctag>"+comm.getFullURL("/sync/calendar/"+synctoken)+"</cs:getctag>"+config.xml_lineend;
+                response+="<cs:getctag>" + comm.getfullurl("/sync/calendar/" + synctoken) + "</cs:getctag>" + config.xml_lineend;
                 break;
             case 'getetag':
                 break;
             case 'checksum-versions':
                 break;
             case 'sync-token':
-                response+="<d:sync-token>"+comm.getFullURL("/sync/calendar/"+synctoken)+"</d:sync-token>"+config.xml_lineend;
+                response+="<d:sync-token>"+config.public_route_prefix+"/sync/calendar/"+synctoken+"</d:sync-token>" + config.xml_lineend;
                 break;
             case 'acl':
                 response+=calendarutil.getACL(comm);
@@ -311,7 +311,7 @@ function returnpropfindelements(comm,calendar,childs,synctoken){
             case 'getcontenttype':
                 break;
             case 'owner':
-                response+="<d:owner><d:href>"+comm.getprincipalurl()+"</d:href></d:owner>"+config.xml_lineend;
+                response+="<d:owner><d:href>"+comm.getprincipalurl()+"</d:href></d:owner>" + config.xml_lineend;
                 break;
             case 'quota-available-bytes':
                 response+="";
@@ -364,13 +364,13 @@ function returncalendar(comm,calendar,childs){
 }
 function getcalendarrootnoderesponse(comm,childs){
     if(config.LSE_Loglevel>=2){
-        LSE_Logger.debug(`[Fennel-NG CalDAV] getCalendarRootNodeResponse`);
+        LSE_Logger.debug(`[Fennel-NG CalDAV] getcalendarrootnoderesponse`);
     }
     let response="";
     const username=comm.getusername();
-    response+="<d:response><d:href>"+comm.geturl()+"</d:href>"+config.xml_lineend;
-    response+="<d:propstat>"+config.xml_lineend;
-    response+="<d:prop>"+config.xml_lineend;
+    response += "<d:response><d:href>" + comm.geturl() + "</d:href>" + config.xml_lineend;
+    response += "<d:propstat>" + config.xml_lineend;
+    response += "<d:prop>" + config.xml_lineend;
     const len=childs.length;
     for(let i=0;i<len;++i){
         const child=childs[i];

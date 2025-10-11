@@ -37,7 +37,7 @@ function propfind(comm){
                 response+="<d:displayname>"+comm.getusername()+"</d:displayname>";
                 break;
             case 'principal-collection-set':
-                response+="<d:principal-collection-set><d:href>"+comm.getfullurl("/p/")+"</d:href></d:principal-collection-set>";
+                response+="<d:principal-collection-set><d:href>" + config.public_route_prefix + ("/p/")+"</d:href></d:principal-collection-set>";
                 break;
             case 'current-user-principal':
                 response+="<d:current-user-principal><d:href>"+comm.getprincipalurl()+"</d:href></d:current-user-principal>";

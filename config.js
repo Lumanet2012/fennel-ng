@@ -34,6 +34,8 @@ var mysql = require('mysql2/promise');
 var config =
 {
     version_nr: '0.1.0',
+    // Base URL for CalDAV/CardDAV service (FQDN)
+    public_base_url: 'https://marketing.lumanet.info',
     // Public route prefix for API endpoints
     public_route_prefix: '/api/fennel-ng',
     port: 8888,

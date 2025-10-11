@@ -155,7 +155,7 @@ function returnPropfindRootProps(comm, nodes)
                 response += "";
                 break;
             case 'owner':
-                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>\r\n";
+                response += "<d:owner><d:href>" + comm.getfullurl("/p/" + username + "/") + "</d:href></d:owner>\r\n";
                 break;
             case 'push-transports':
                 response += "";
@@ -200,7 +200,7 @@ function returnPropfindRootProps(comm, nodes)
 function returnPropfindProps(comm, nodes, adb, rsVCARD)
 {
     var username = comm.getUser().getusername();
-    var response = "<d:response><d:href>" + comm.getFullURL("/card/" + username + "/" + adb.uri + "/") + "</d:href>";
+    var response = "<d:response><d:href>" + comm.getfullurl("/card/" + username + "/" + adb.uri + "/") + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
     var responseEtag = "";
@@ -232,7 +232,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += "";
                 break;
             case 'owner':
-                response += "<d:owner><d:href>" + comm.getFullURL("/p/" + username + "/") + "</d:href></d:owner>\r\n";
+                response += "<d:owner><d:href>" + comm.getfullurl("/p/" + username + "/") + "</d:href></d:owner>\r\n";
                 break;
             case 'push-transports':
                 response += "";
@@ -256,10 +256,10 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += getSupportedReportSet();
                 break;
             case 'sync-token':
-                response += "<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</d:sync-token>\r\n";
+                response += "<d:sync-token>" + comm.getfullurl("/sync/addressbook/" + adb.synctoken) + "</d:sync-token>\r\n";
                 break;
             case 'getctag':
-                response += "<cs:getctag>" + comm.getFullURL("/sync/addressbook/" + adb.synctoken) + "</cs:getctag>\r\n";
+                response += "<cs:getctag>" + comm.getfullurl("/sync/addressbook/" + adb.synctoken) + "</cs:getctag>\r\n";
                 break;
             case 'getetag':
                 responseEtag += returnADBETag(comm, rsVCARD);
@@ -459,7 +459,7 @@ function handleReportSyncCollection(comm)
                 }
                 comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
                 comm.appendresbody(response);
-                comm.appendresbody("<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + currentSyncToken) + "</d:sync-token>\r\n");
+                comm.appendresbody("<d:sync-token>" + comm.getfullurl("/sync/addressbook/" + currentSyncToken) + "</d:sync-token>\r\n");
                 comm.appendresbody("</d:multistatus>\r\n");
                 comm.flushresponse();
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Sync collection completed: ${changes.length} changes`);

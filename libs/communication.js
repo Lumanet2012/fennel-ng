@@ -170,42 +170,60 @@ comm.prototype.geturl = function() {
     return this.req.url;
 };
 comm.prototype.getfullurl = function(path) {
+    const config = require('../config').config;
+    const baseurl = config.public_base_url || '';
     if(!path) {
         path = this.req.url;
     }
-    if(this.routeprefix && !path.startsWith(this.routeprefix)) {
+    if(this.routePrefix && !path.startsWith(this.routePrefix)) {
         if(path.startsWith('/')) {
-            return this.routeprefix + path;
+            path = this.routePrefix + path;
         } else {
-            return this.routeprefix + '/' + path;
+            path = this.routePrefix + '/' + path;
         }
+    }
+    return baseurl + path;
+};
+comm.prototype.getprincipalurl = function(caldav_username) {
+    if(!caldav_username) {
+        caldav_username = this.getcaldav_username();
+    }
+    return config.public_route_prefix + '/p/' + caldav_username + '/';
+};
+comm.prototype.getcalendarurl = function(caldav_username, calendaruri) {
+    if(!caldav_username) {
+        caldav_username = this.getcaldav_username();
+    }
+    var path = config.public_route_prefix + '/cal/' + caldav_username + '/';
+    if(calendaruri) {
+        path += calendaruri + '/';
     }
     return path;
 };
-comm.prototype.getprincipalurl = function(username) {
-    if(!username) {
-        username = this.getuser().getusername();
+comm.prototype.getcalendarhomeurl = function(caldav_username) {
+    if(!caldav_username) {
+        caldav_username = this.getcaldav_username();
     }
-    return this.getfullurl('/p/' + username + '/');
+    var path = config.public_base_url + config.public_route_prefix + '/cal/' + caldav_username + '/';
+    return path;
 };
-comm.prototype.getcalendarurl = function(username, calendaruri) {
-    if(!username) {
-        username = this.getuser().getusername();
+comm.prototype.getaddressbookhomeurl = function(caldav_username) {
+    if(!caldav_username) {
+        caldav_username = this.getcaldav_username();
     }
-    if(calendaruri) {
-        return this.getfullurl('/cal/' + username + '/' + calendaruri + '/');
-    } else {
-        return this.getfullurl('/cal/' + username + '/');
-    }
+    var path = config.public_base_url + config.public_route_prefix + '/card/' + caldav_username + '/';
+    return path;
 };
-comm.prototype.getcardurl = function(username, addressbookuri) {
-    if(!username) {
-        username = this.getuser().getusername();
+comm.prototype.getcardurl = function(caldav_username, addressbookuri) {
+    if(!caldav_username) {
+        caldav_username = this.getcaldav_username();
     }
     if(addressbookuri) {
-        return this.getfullurl('/card/' + username + '/' + addressbookuri + '/');
+        var path = config.public_base_url + config.public_route_prefix + '/card/' + caldav_username + '/' + addressbookuri + '/';
+        return path;
     } else {
-        return this.getfullurl('/card/' + username + '/');
+        var path = config.public_base_url + config.public_route_prefix + '/card/' + caldav_username + '/';
+        return path;
     }
 };
 comm.prototype.geturlasarray = function() {
