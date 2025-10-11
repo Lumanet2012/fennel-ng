@@ -11,9 +11,9 @@ function del(comm)
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.delete called`);
     comm.setHeader("Content-Type", "text/html");
     comm.setHeader("Server", "Fennel-NG");
-    comm.setResponseCode(204);
+    comm.setresponsecode(204);
     var isRoot = true;
-    if(comm.getUrlElementSize() > 4)
+    if(comm.geturlelementsize() > 4)
     {
         var lastPathElement = comm.getFilenameFromPath(false);
         if(comm.stringEndsWith(lastPathElement, '.vcf'))
@@ -31,8 +31,8 @@ function del(comm)
             if(adb === null)
             {
                 LSE_Logger.warn(`[Fennel-NG CardDAV] Could not find addressbook with URI: ${addressbookUri}`);
-                comm.setResponseCode(404);
-                comm.flushResponse();
+                comm.setresponsecode(404);
+                comm.flushresponse();
                 return;
             }
             return redis.incrementAddressbookSyncToken(adb.uri, username).then(function(newSyncToken)
@@ -57,13 +57,13 @@ function del(comm)
                 return redis.deleteAddressbookSyncToken(adb.uri, username);
             }).then(function()
             {
-                comm.flushResponse();
+                comm.flushresponse();
             });
         }).catch(function(error)
         {
             LSE_Logger.error(`[Fennel-NG CardDAV] Error deleting addressbook: ${error.message}`);
-            comm.setResponseCode(500);
-            comm.flushResponse();
+            comm.setresponsecode(500);
+            comm.flushresponse();
         });
     }
     else
@@ -76,8 +76,8 @@ function del(comm)
             if(!adb)
             {
                 LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found: ${addressbookUri}`);
-                comm.setResponseCode(404);
-                comm.flushResponse();
+                comm.setresponsecode(404);
+                comm.flushresponse();
                 return;
             }
             return VCARDS.findOne({ where: {addressbookid: adb.id, uri: vcardUri + '.vcf'}});
@@ -86,8 +86,8 @@ function del(comm)
             if(!vcard)
             {
                 LSE_Logger.warn(`[Fennel-NG CardDAV] VCard not found: ${vcardUri}`);
-                comm.setResponseCode(404);
-                comm.flushResponse();
+                comm.setresponsecode(404);
+                comm.flushresponse();
                 return;
             }
             return redis.incrementAddressbookSyncToken(addressbookUri, username).then(function(newSyncToken)
@@ -105,13 +105,13 @@ function del(comm)
             }).then(function()
             {
                 LSE_Logger.info(`[Fennel-NG CardDAV] Successfully deleted vCard: ${vcardUri}`);
-                comm.flushResponse();
+                comm.flushresponse();
             });
         }).catch(function(error)
         {
             LSE_Logger.error(`[Fennel-NG CardDAV] Error deleting vCard: ${error.message}`);
-            comm.setResponseCode(500);
-            comm.flushResponse();
+            comm.setresponsecode(500);
+            comm.flushresponse();
         });
     }
 }

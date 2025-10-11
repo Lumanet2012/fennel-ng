@@ -7,7 +7,7 @@ const redis=require('../libs/redis');
 const crypto=require('crypto');
 const icsparser=require('../libs/ics-main');
 const calendarobjects=require('../libs/db').CALENDAROBJECTS;
-const calendars=require('../libs/db').CALENDARS;
+const calendars=require('../libs/db').calendars;
 function put(comm){
     if(config.LSE_Loglevel>=1){
         LSE_Logger.info(`[Fennel-NG CalDAV] put called`);

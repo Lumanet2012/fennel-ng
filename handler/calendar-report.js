@@ -5,16 +5,16 @@ const moment=require('moment');
 const config=require('../config').config;
 const xh=require("../libs/xmlhelper");
 const calendarobjects=require('../libs/db').CALENDAROBJECTS;
-const calendars=require('../libs/db').CALENDARS;
+const calendars=require('../libs/db').calendars;
 const calendarutil=require('./calendar-util');
 function report(comm){
     if(config.LSE_Loglevel>=2){
         LSE_Logger.debug(`[Fennel-NG CalDAV] report`);
     }
-    comm.setStandardHeaders();
-    comm.setResponseCode(207);
-    comm.appendResBody(xh.getXMLHead());
-    const body=comm.getReqBody();
+    comm.setstandardheaders();
+    comm.setresponsecode(207);
+    comm.appendresbody(xh.getXMLHead());
+    const body=comm.getreqbody();
     const xmldoc=xml.parseXml(body);
     const rootkeys=Object.keys(xmldoc);
     const rootname=rootkeys[0];
@@ -50,8 +50,8 @@ function handlereportcalendarquery(comm,xmldoc){
             if(config.LSE_Loglevel>=1){
                 LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found for query: ${calendaruri}`);
             }
-            comm.setResponseCode(404);
-            comm.flushResponse();
+            comm.setresponsecode(404);
+            comm.flushresponse();
             return;
         }
         filter.calendarid=calendar.id;
@@ -80,7 +80,7 @@ function handlereportcalendarquery(comm,xmldoc){
             let response="";
             const nodeprops=nodeprop?Object.keys(nodeprop):[];
             const len=nodeprops.length;
-            let requrl=comm.getURL();
+            let requrl=comm.geturl();
             requrl+=requrl.match("\/$")?"":"/";
             for(let j=0;j<result.count;j++){
                 const calendarobject=result.rows[j];
@@ -111,10 +111,10 @@ function handlereportcalendarquery(comm,xmldoc){
                 response+="</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>"+config.xml_lineend;
                 response+="</d:response>"+config.xml_lineend;
             }
-            comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">"+config.xml_lineend);
-            comm.appendResBody(response);
-            comm.appendResBody("</d:multistatus>"+config.xml_lineend);
-            comm.flushResponse();
+            comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">"+config.xml_lineend);
+            comm.appendresbody(response);
+            comm.appendresbody("</d:multistatus>"+config.xml_lineend);
+            comm.flushresponse();
         });
     });
 }
@@ -122,7 +122,7 @@ function handlereportcalendarmultiget(comm){
     if(config.LSE_Loglevel>=2){
         LSE_Logger.debug(`[Fennel-NG CalDAV] handleReportCalendarMultiget`);
     }
-    const body=comm.getReqBody();
+    const body=comm.getreqbody();
     const xmldoc=xml.parseXml(body);
     const hrefnodes=xmldoc.href;
     if(hrefnodes!=undefined){
@@ -169,12 +169,12 @@ function handlereporthrefs(comm,arreventuris){
         let response="";
         for(let i=0;i<result.count;++i){
             const calendarobject=result.rows[i];
-            let requrl=comm.getURL();
+            let requrl=comm.geturl();
             requrl+=requrl.match("\/$")?"":"/";
             response+="<d:response>"+config.xml_lineend;
             response+="<d:href>"+requrl+calendarobject.uri+"</d:href>"+config.xml_lineend;
             response+="<d:propstat><d:prop>"+config.xml_lineend;
-            const body=comm.getReqBody();
+            const body=comm.getreqbody();
             const xmldoc=xml.parseXml(body);
             const nodeprops=xmldoc.prop?Object.keys(xmldoc.prop):[];
             const len=nodeprops.length;
@@ -201,17 +201,17 @@ function handlereporthrefs(comm,arreventuris){
             response+="</d:propstat>"+config.xml_lineend;
             response+="</d:response>"+config.xml_lineend;
         }
-        comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">"+config.xml_lineend);
-        comm.appendResBody(response);
-        comm.appendResBody("</d:multistatus>"+config.xml_lineend);
-        comm.flushResponse();
+        comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">"+config.xml_lineend);
+        comm.appendresbody(response);
+        comm.appendresbody("</d:multistatus>"+config.xml_lineend);
+        comm.flushresponse();
     });
 }
 function handlereportsynccollection(comm){
     if(config.LSE_Loglevel>=2){
         LSE_Logger.debug(`[Fennel-NG CalDAV] handleReportSyncCollection`);
     }
-    const body=comm.getReqBody();
+    const body=comm.getreqbody();
     const xmldoc=xml.parseXml(body);
     const synctokennode=xmldoc['sync-token'];
     if(synctokennode!=undefined){
@@ -223,8 +223,8 @@ function handlereportsynccollection(comm){
                 if(config.LSE_Loglevel>=1){
                     LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found for sync: ${calendaruri}`);
                 }
-                comm.setResponseCode(404);
-                comm.flushResponse();
+                comm.setresponsecode(404);
+                comm.flushresponse();
                 return;
             }
             calendarobjects.findAndCountAll({where:{calendarid:calendar.id}}).then(function(result){
@@ -233,7 +233,7 @@ function handlereportsynccollection(comm){
                     const calendarobject=result.rows[j];
                     const nodeprops=xmldoc.prop?Object.keys(xmldoc.prop):[];
                     const len=nodeprops.length;
-                    let requrl=comm.getURL();
+                    let requrl=comm.geturl();
                     requrl+=requrl.match("\/$")?"":"/";
                     response+="<d:response>"+config.xml_lineend;
                     response+="<d:href>"+requrl+calendarobject.uri+"</d:href>"+config.xml_lineend;
@@ -263,10 +263,10 @@ function handlereportsynccollection(comm){
                     response+="</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>"+config.xml_lineend;
                     response+="</d:response>"+config.xml_lineend;
                 }
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">"+config.xml_lineend);
-                comm.appendResBody(response);
-                comm.appendResBody("</d:multistatus>"+config.xml_lineend);
-                comm.flushResponse();
+                comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\" xmlns:ical=\"http://apple.com/ns/ical/\">"+config.xml_lineend);
+                comm.appendresbody(response);
+                comm.appendresbody("</d:multistatus>"+config.xml_lineend);
+                comm.flushresponse();
             });
         });
     }

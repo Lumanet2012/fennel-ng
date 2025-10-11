@@ -4,7 +4,7 @@ var ICS = require('../libs/db').ICS;
 function move(comm)
 {
     LSE_Logger.info("[Fennel-NG CalDAV] calendar.move called");
-    comm.setStandardHeaders();
+    comm.setstandardheaders();
     var ics_id = comm.getFilenameFromPath(true);
     var calendar = comm.getCalIdFromURL();
     var destination = "";
@@ -37,8 +37,8 @@ function move(comm)
             }
         });
     }
-    comm.setResponseCode(201);
-    comm.flushResponse();
+    comm.setresponsecode(201);
+    comm.flushresponse();
 }
 module.exports = {
     move: move

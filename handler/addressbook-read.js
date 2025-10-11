@@ -24,21 +24,21 @@ module.exports = {
 function propfind(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.propfind called`);
-    comm.setStandardHeaders();
-    comm.setDAVHeaders();
-    comm.setResponseCode(207);
-    comm.appendResBody(xh.getXMLHead());
+    comm.setstandardheaders();
+    comm.setdavheaders();
+    comm.setresponsecode(207);
+    comm.appendresbody(xh.getXMLHead());
     var response = "";
-    var body = comm.getReqBody();
+    var body = comm.getreqbody();
     var xmlDoc = xml.parseXml(body);
     var node = xmlDoc.propfind;
     var childs = node && node.prop ? Object.keys(node.prop) : [];
     var isRoot = true;
-    if(comm.getUrlElementSize() > 4)
+    if(comm.geturlelementsize() > 4)
     {
         isRoot = false;
     }
-    var username = comm.getUser().getUserName();
+    var username = comm.getUser().getusername();
     if(isRoot === true)
     {
         response += returnPropfindRootProps(comm, childs);
@@ -72,15 +72,15 @@ function propfind(comm)
                 return Promise.resolve();
             }).then(function()
             {
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-                comm.appendResBody(response);
-                comm.appendResBody("</d:multistatus>\r\n");
-                comm.flushResponse();
+                comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
+                comm.appendresbody(response);
+                comm.appendresbody("</d:multistatus>\r\n");
+                comm.flushresponse();
             }).catch(function(error)
             {
                 LSE_Logger.error(`[Fennel-NG CardDAV] Error in propfind root: ${error.message}`);
-                comm.setResponseCode(500);
-                comm.flushResponse();
+                comm.setresponsecode(500);
+                comm.flushresponse();
             });
         });
     }
@@ -92,8 +92,8 @@ function propfind(comm)
             if(!adb)
             {
                 LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found: ${adbUri}`);
-                comm.setResponseCode(404);
-                comm.flushResponse();
+                comm.setresponsecode(404);
+                comm.flushresponse();
                 return;
             }
             return redis.getAddressbookSyncToken(adb.uri, username).then(function(redisSyncToken)
@@ -107,26 +107,26 @@ function propfind(comm)
             }).then(function(rsVCARDS)
             {
                 response += returnPropfindProps(comm, childs, adb, rsVCARDS);
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-                comm.appendResBody(response);
-                comm.appendResBody("</d:multistatus>\r\n");
-                comm.flushResponse();
+                comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
+                comm.appendresbody(response);
+                comm.appendresbody("</d:multistatus>\r\n");
+                comm.flushresponse();
             });
         }).catch(function(error)
         {
             LSE_Logger.error(`[Fennel-NG CardDAV] Error in propfind specific: ${error.message}`);
-            comm.setResponseCode(500);
-            comm.flushResponse();
+            comm.setresponsecode(500);
+            comm.flushresponse();
         });
     }
 }
 function returnPropfindRootProps(comm, nodes)
 {
-    var response = "<d:response><d:href>" + comm.getURL() + "</d:href>";
+    var response = "<d:response><d:href>" + comm.geturl() + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
     var responseEtag = "";
-    var username = comm.getUser().getUserName();
+    var username = comm.getUser().getusername();
     var len = nodes.length;
     for (var i=0; i < len; ++i)
     {
@@ -140,7 +140,7 @@ function returnPropfindRootProps(comm, nodes)
                 response += "";
                 break;
             case 'current-user-privilege-set':
-                response += getCurrentUserPrivilegeSet();
+                response += getcurrentuserprivilegeset();
                 break;
             case 'displayname':
                 response += "<d:displayname>Contacts</d:displayname>\r\n";
@@ -199,7 +199,7 @@ function returnPropfindRootProps(comm, nodes)
 }
 function returnPropfindProps(comm, nodes, adb, rsVCARD)
 {
-    var username = comm.getUser().getUserName();
+    var username = comm.getUser().getusername();
     var response = "<d:response><d:href>" + comm.getFullURL("/card/" + username + "/" + adb.uri + "/") + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
@@ -217,7 +217,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += "";
                 break;
             case 'current-user-privilege-set':
-                response += getCurrentUserPrivilegeSet();
+                response += getcurrentuserprivilegeset();
                 break;
             case 'displayname':
                 response += "<d:displayname>" + adb.displayname + "</d:displayname>\r\n";
@@ -287,7 +287,7 @@ function returnADBETag(comm, rsVCARD)
         var vcard = rsVCARD.rows[j];
         var date = Date.parse(vcard.lastmodified || vcard.updatedAt);
         response += "<d:response>\r\n";
-        response += "<d:href>" + comm.getURL() + vcard.uri + "</d:href>\r\n";
+        response += "<d:href>" + comm.geturl() + vcard.uri + "</d:href>\r\n";
         response += "<d:propstat>\r\n";
         response += "<d:prop>\r\n";
         response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>\r\n";
@@ -302,15 +302,15 @@ function gett(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.get called`);
     var vcardUri = comm.getFilenameFromPath(true);
-    var username = comm.getUser().getUserName();
+    var username = comm.getUser().getusername();
     var addressbookUri = comm.getPathElement(3);
     ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
             LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found: ${addressbookUri}`);
-            comm.setResponseCode(404);
-            comm.flushResponse();
+            comm.setresponsecode(404);
+            comm.flushresponse();
             return;
         }
         return VCARDS.findOne({ where: {addressbookid: adb.id, uri: vcardUri + '.vcf'}});
@@ -319,30 +319,30 @@ function gett(comm)
         if(!vcard)
         {
             LSE_Logger.warn(`[Fennel-NG CardDAV] VCard not found: ${vcardUri}`);
-            comm.setResponseCode(404);
+            comm.setresponsecode(404);
         }
         else
         {
             comm.setHeader("Content-Type", "text/vcard; charset=utf-8");
             var content = vcard.carddata || vcard.content;
-            comm.appendResBody(content);
+            comm.appendresbody(content);
             LSE_Logger.debug(`[Fennel-NG CardDAV] Retrieved vcard: ${vcardUri}`);
         }
-        comm.flushResponse();
+        comm.flushresponse();
     }).catch(function(error)
     {
         LSE_Logger.error(`[Fennel-NG CardDAV] Error in get: ${error.message}`);
-        comm.setResponseCode(500);
-        comm.flushResponse();
+        comm.setresponsecode(500);
+        comm.flushresponse();
     });
 }
 function report(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.report called`);
-    comm.setStandardHeaders();
-    comm.setResponseCode(200);
-    comm.appendResBody(xh.getXMLHead());
-    var body = comm.getReqBody();
+    comm.setstandardheaders();
+    comm.setresponsecode(200);
+    comm.appendresbody(xh.getXMLHead());
+    var body = comm.getreqbody();
     var xmlDoc = xml.parseXml(body);
     var rootKeys = Object.keys(xmlDoc);
     var rootName = rootKeys[0];
@@ -356,13 +356,13 @@ function report(comm)
             break;
         default:
             if(rootName != 'text') LSE_Logger.warn(`[Fennel-NG CardDAV] Report not handled: ${rootName}`);
-            comm.flushResponse();
+            comm.flushresponse();
             break;
     }
 }
 function handleReportAddressbookMultiget(comm)
 {
-    var body = comm.getReqBody();
+    var body = comm.getreqbody();
     var xmlDoc = xml.parseXml(body);
     var multigetNode = xmlDoc['addressbook-multiget'];
     if(multigetNode != undefined)
@@ -394,14 +394,14 @@ function handleReportAddressbookMultiget(comm)
     }
     else
     {
-        comm.flushResponse();
+        comm.flushresponse();
     }
 }
 function handleReportSyncCollection(comm)
 {
-    var body = comm.getReqBody();
+    var body = comm.getreqbody();
     var xmlDoc = xml.parseXml(body);
-    var username = comm.getUser().getUserName();
+    var username = comm.getUser().getusername();
     var addressbookUri = comm.getPathElement(3);
     var syncTokenNode = xmlDoc['sync-token'];
     var requestedSyncToken = 0;
@@ -419,8 +419,8 @@ function handleReportSyncCollection(comm)
         if(!adb)
         {
             LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found for sync: ${addressbookUri}`);
-            comm.setResponseCode(404);
-            comm.flushResponse();
+            comm.setresponsecode(404);
+            comm.flushresponse();
             return;
         }
         return redis.getAddressbookSyncToken(adb.uri, username).then(function(redisSyncToken)
@@ -429,8 +429,8 @@ function handleReportSyncCollection(comm)
             if(requestedSyncToken > currentSyncToken)
             {
                 LSE_Logger.warn(`[Fennel-NG CardDAV] Invalid sync token requested: ${requestedSyncToken} > ${currentSyncToken}`);
-                comm.setResponseCode(409);
-                comm.flushResponse();
+                comm.setresponsecode(409);
+                comm.flushresponse();
                 return;
             }
             return ADDRESSBOOKCHANGES.findAll({
@@ -446,7 +446,7 @@ function handleReportSyncCollection(comm)
                 {
                     var change = changes[i];
                     response += "<d:response>\r\n";
-                    response += "<d:href>" + comm.getURL() + change.uri + "</d:href>\r\n";
+                    response += "<d:href>" + comm.geturl() + change.uri + "</d:href>\r\n";
                     if(change.operation === 1)
                     {
                         response += "<d:status>HTTP/1.1 200 OK</d:status>\r\n";
@@ -457,19 +457,19 @@ function handleReportSyncCollection(comm)
                     }
                     response += "</d:response>\r\n";
                 }
-                comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-                comm.appendResBody(response);
-                comm.appendResBody("<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + currentSyncToken) + "</d:sync-token>\r\n");
-                comm.appendResBody("</d:multistatus>\r\n");
-                comm.flushResponse();
+                comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
+                comm.appendresbody(response);
+                comm.appendresbody("<d:sync-token>" + comm.getFullURL("/sync/addressbook/" + currentSyncToken) + "</d:sync-token>\r\n");
+                comm.appendresbody("</d:multistatus>\r\n");
+                comm.flushresponse();
                 LSE_Logger.debug(`[Fennel-NG CardDAV] Sync collection completed: ${changes.length} changes`);
             });
         });
     }).catch(function(error)
     {
         LSE_Logger.error(`[Fennel-NG CardDAV] Error in sync collection: ${error.message}`);
-        comm.setResponseCode(500);
-        comm.flushResponse();
+        comm.setresponsecode(500);
+        comm.flushresponse();
     });
 }
 function parseHrefToVCARDId(href)
@@ -480,15 +480,15 @@ function parseHrefToVCARDId(href)
 }
 function handleReportHrefs(comm, arrVCARDIds)
 {
-    var username = comm.getUser().getUserName();
+    var username = comm.getUser().getusername();
     var addressbookUri = comm.getPathElement(3);
     ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
             LSE_Logger.warn(`[Fennel-NG CardDAV] Addressbook not found for hrefs: ${addressbookUri}`);
-            comm.setResponseCode(404);
-            comm.flushResponse();
+            comm.setresponsecode(404);
+            comm.flushresponse();
             return;
         }
         var vcardUris = arrVCARDIds.map(function(id) { return id + '.vcf'; });
@@ -504,23 +504,23 @@ function handleReportHrefs(comm, arrVCARDIds)
             content = content.replace(/&/g,'&amp;');
             content = content.replace(/\r\n|\r|\n/g,'&#13;\r\n');
             response += "<d:response>\r\n";
-            response += "<d:href>" + comm.getURL() + vcard.uri + "</d:href>\r\n";
+            response += "<d:href>" + comm.geturl() + vcard.uri + "</d:href>\r\n";
             response += "<d:propstat><d:prop>\r\n";
             response += "<card:address-data>" + content + "</card:address-data>\r\n";
             response += "<d:getetag>\"" + Number(date) + "\"</d:getetag>\r\n";
             response += "</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>\r\n";
             response += "</d:response>\r\n";
         }
-        comm.appendResBody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
-        comm.appendResBody(response);
-        comm.appendResBody("</d:multistatus>\r\n");
-        comm.flushResponse();
+        comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">\r\n");
+        comm.appendresbody(response);
+        comm.appendresbody("</d:multistatus>\r\n");
+        comm.flushresponse();
         LSE_Logger.debug(`[Fennel-NG CardDAV] Multiget completed: ${vcards.length} vcards`);
     }).catch(function(error)
     {
         LSE_Logger.error(`[Fennel-NG CardDAV] Error in report hrefs: ${error.message}`);
-        comm.setResponseCode(500);
-        comm.flushResponse();
+        comm.setresponsecode(500);
+        comm.flushresponse();
     });
 }
 function getSupportedReportSet()
@@ -534,7 +534,7 @@ function getSupportedReportSet()
     response += "</d:supported-report-set>";
     return response;
 }
-function getCurrentUserPrivilegeSet()
+function getcurrentuserprivilegeset()
 {
     var response = "";
     response += "<d:current-user-privilege-set>\r\n";

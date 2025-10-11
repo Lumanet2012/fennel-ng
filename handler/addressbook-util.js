@@ -9,7 +9,7 @@ function getSupportedReportSet()
     response += "</d:supported-report-set>\r\n";
     return response;
 }
-function getCurrentUserPrivilegeSet()
+function getcurrentuserprivilegeset()
 {
     var response = "";
     response += "<d:current-user-privilege-set>\r\n";
@@ -29,5 +29,5 @@ function getCurrentUserPrivilegeSet()
 }
 module.exports = {
     getSupportedReportSet: getSupportedReportSet,
-    getCurrentUserPrivilegeSet: getCurrentUserPrivilegeSet
+    getcurrentuserprivilegeset: getcurrentuserprivilegeset
 };

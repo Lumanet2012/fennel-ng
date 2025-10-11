@@ -213,16 +213,16 @@ function onhitcalendar(comm, caldav_username, params)
         {
             const res = comm.getres();
             if(config.LSE_Loglevel >= 1) {
-                LSE_Logger.warn(`[Fennel-NG] Calendar request denied for user: ${comm.getuser().getUserName()}`);
+                LSE_Logger.warn(`[Fennel-NG] Calendar request denied for user: ${comm.getuser().getusername()}`);
             }
             res.writeHead(403);
             res.write("Access denied to this calendar resource");
             res.end();
             return;
         }
-        handler.handleCalendar(comm);
+        handler.handlecalendar(comm);
     } catch(error) {
-        LSE_Logger.error(`[Fennel-NG] Error in onHitCalendar: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG] Error in onhitcalendar: ${error.message}`);
         LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
         if(comm && comm.getres && !comm.getres().headersSent) {
             comm.getres().writeHead(500);
@@ -253,7 +253,7 @@ function onhitaddressbook(comm, caldav_username, params)
         {
             const res = comm.getres();
             if(config.LSE_Loglevel >= 1) {
-                LSE_Logger.warn(`[Fennel-NG] CardDAV request denied for user: ${comm.getuser().getUserName()}`);
+                LSE_Logger.warn(`[Fennel-NG] CardDAV request denied for user: ${comm.getuser().getusername()}`);
             }
             res.writeHead(403);
             res.write("Access denied to this addressbook resource");
@@ -296,7 +296,7 @@ function onhitcalendarroot(comm)
         if(config.LSE_Loglevel >= 2) {
             LSE_Logger.debug(`[Fennel-NG DEBUG] Calling handler.handlecalendarroot`);
         }
-        handler.handleCalendarRoot(comm);
+        handler.handlecalendarroot(comm);
         if(config.LSE_Loglevel >= 2) {
             LSE_Logger.debug(`[Fennel-NG DEBUG] handler.handlecalendarroot completed`);
         }
@@ -318,14 +318,14 @@ function onhitaddressbookroot(comm)
             LSE_Logger.debug(`[Fennel-NG DEBUG] URL: ${comm.getreq().url}`);
             LSE_Logger.debug(`[Fennel-NG DEBUG] Headers: ${JSON.stringify(comm.getreq().headers)}`);
             LSE_Logger.debug(`[Fennel-NG DEBUG] Body: ${comm.getreqbody()}`);
-            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getUserName()}`);
+            LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
             LSE_Logger.debug('[Fennel-NG DEBUG] =========================================');
         }
         if(!comm.checkpermission('/card/', comm.getreq().method))
         {
             const res = comm.getres();
             if(config.LSE_Loglevel >= 1) {
-                LSE_Logger.warn(`[Fennel-NG] Addressbook root request denied for user: ${comm.getuser().getUserName()}`);
+                LSE_Logger.warn(`[Fennel-NG] Addressbook root request denied for user: ${comm.getuser().getusername()}`);
             }
             res.writeHead(403);
             res.write("Access denied to addressbook root");

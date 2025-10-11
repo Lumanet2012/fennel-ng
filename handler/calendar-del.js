@@ -1,15 +1,15 @@
 var config = require('../config').config;
 var redis = require('../libs/redis');
 var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
-var CALENDARS = require('../libs/db').CALENDARS;
+var calendars = require('../libs/db').calendars;
 function del(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CalDAV] calendar.delete called`);
     comm.setHeader("Content-Type", "text/html");
     comm.setHeader("Server", "Fennel-NG");
-    comm.setResponseCode(204);
+    comm.setresponsecode(204);
     var isRoot = true;
-    if(comm.getUrlElementSize() > 4)
+    if(comm.geturlelementsize() > 4)
     {
         var lastPathElement = comm.getFilenameFromPath(false);
         if(comm.stringEndsWith(lastPathElement, '.ics'))
@@ -22,7 +22,7 @@ function del(comm)
         var calendarUri = comm.getPathElement(3);
         var username = comm.getusername();
         var principalUri = 'principals/' + username;
-        CALENDARS.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
+        calendars.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
         {
             if(calendar === null)
             {
@@ -37,7 +37,7 @@ function del(comm)
                     redis.del(`fennel:sync:cal:${calendarId}`);
                 })
             }
-            comm.flushResponse();
+            comm.flushresponse();
         });
     }
     else
@@ -62,14 +62,14 @@ function del(comm)
                     });
                 })
             }
-            comm.flushResponse();
+            comm.flushresponse();
         });
     }
 }
 function updateCalendarSyncToken(calendarId)
 {
     return new Promise(function(resolve, reject) {
-        CALENDARS.findOne({ where: {id: calendarId} }).then(function(calendar) {
+        calendars.findOne({ where: {id: calendarId} }).then(function(calendar) {
             if (!calendar) {
                 reject(new Error('Calendar not found'));
                 return;

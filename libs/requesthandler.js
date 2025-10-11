@@ -36,11 +36,11 @@ function handlecalendar(request)
     const urlelements = request.geturlelementsize();
     if(urlelements === 3)
     {
-        cal.handleRoot(request);
+        cal.handleroot(request);
     }
     else
     {
-        cal.handleCalendar(request);
+        cal.handlecalendar(request);
     }
 }
 function handlecard(request)
@@ -89,7 +89,7 @@ function handleaddressbook(request)
 }
 function handlecalendarroot(request)
 {
-    cal.handleRoot(request);
+    cal.handleroot(request);
 }
 function handleaddressbookroot(request)
 {

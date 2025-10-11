@@ -36,7 +36,7 @@ comm.prototype.createsimpleauthority = function() {
                 }
                 return false;
             }
-            const username = self.user.getUserName();
+            const username = self.user.getusername();
             if(config.LSE_Loglevel >= 2) {
                 LSE_Logger.debug('[Fennel-NG Comm] Authority check for user: ' + username + ', permission: ' + permission);
             }
@@ -150,7 +150,7 @@ comm.prototype.checkpermission = function(strurl, strmethod) {
     }
     const ret = this.authority.check(permissionstring);
     if(config.LSE_Loglevel >= 2) {
-        LSE_Logger.debug('[Fennel-NG Comm] Permission result for user \'' + this.getUser().getUserName() + '\': ' + ret);
+        LSE_Logger.debug('[Fennel-NG Comm] Permission result for user \'' + this.getuser().getusername() + '\': ' + ret);
     }
     return ret;
 };
@@ -184,13 +184,13 @@ comm.prototype.getfullurl = function(path) {
 };
 comm.prototype.getprincipalurl = function(username) {
     if(!username) {
-        username = this.getuser().getUserName();
+        username = this.getuser().getusername();
     }
     return this.getfullurl('/p/' + username + '/');
 };
 comm.prototype.getcalendarurl = function(username, calendaruri) {
     if(!username) {
-        username = this.getuser().getUserName();
+        username = this.getuser().getusername();
     }
     if(calendaruri) {
         return this.getfullurl('/cal/' + username + '/' + calendaruri + '/');
@@ -200,7 +200,7 @@ comm.prototype.getcalendarurl = function(username, calendaruri) {
 };
 comm.prototype.getcardurl = function(username, addressbookuri) {
     if(!username) {
-        username = this.getuser().getUserName();
+        username = this.getuser().getusername();
     }
     if(addressbookuri) {
         return this.getfullurl('/card/' + username + '/' + addressbookuri + '/');
@@ -223,7 +223,7 @@ comm.prototype.geturlasarray = function() {
     return aurl;
 };
 comm.prototype.getFilenameFromPath = function(removeending) {
-    const aurl = this.getURLAsArray();
+    const aurl = this.geturlasarray();
     if(aurl.length <= 0) {
         if(config.LSE_Loglevel >= 1) {
             LSE_Logger.warn('[Fennel-NG Comm] Something evil happened in request.getFilenameFromPath');
@@ -240,21 +240,21 @@ comm.prototype.getFilenameFromPath = function(removeending) {
     return filename;
 };
 comm.prototype.getCalIdFromURL = function() {
-    const aurl = this.getURLAsArray();
+    const aurl = this.geturlasarray();
     if(aurl.length > 3) {
         return aurl[3];
     }
     return undefined;
 };
-comm.prototype.getUrlElementSize = function() {
-    const aurl = this.getURLAsArray();
+comm.prototype.geturlelementsize = function() {
+    const aurl = this.geturlasarray();
     return aurl.length;
 };
 comm.prototype.getHeader = function(headername) {
     return this.req.headers[headername.toLowerCase()];
 };
 comm.prototype.getPathElement = function(index) {
-    const aurl = this.getURLAsArray();
+    const aurl = this.geturlasarray();
     if(aurl && aurl.length > index) {
         return aurl[index];
     }
