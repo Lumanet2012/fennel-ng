@@ -14,7 +14,7 @@ function move(comm)
     var sourceAddressbookUri = comm.getPathElement(3);
     var username = comm.getusername();
     var destination = "";
-    var req = comm.getReq();
+    var req = comm.getreq();
     var headers = req.headers;
     for(var header in headers)
     {

@@ -17,17 +17,17 @@ function getsupportedreportset(isroot) {
 function getcurrentuserprivilegeset() {
     let response = "";
     response += "<d:current-user-privilege-set>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><cal:read-free-busy/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-acl/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-content/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:write-properties/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:bind/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:unbind/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:unlock/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-acl/></d:privilege>" + config.xml_lineend;
-    response += "<d:privilege xmlns:d=\"DAV:\"><d:read-current-user-privilege-set/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><cal:read-free-busy/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write-acl/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write-content/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write-properties/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:bind/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:unbind/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:unlock/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:read/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:read-acl/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:read-current-user-privilege-set/></d:privilege>" + config.xml_lineend;
     response += "</d:current-user-privilege-set>" + config.xml_lineend;
     return response;
 }
@@ -70,7 +70,7 @@ function returnoutbox(comm) {
     const caldav_username = comm.getcaldav_username();
     const lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
-    response += "<d:href>" + comm.getcalendarurl(null, "outbox") + "</d:href>" + lineend;
+    response += "<d:href>outbox/</d:href>" + lineend;
     response += "<d:propstat>" + lineend;
     response += "    <d:prop>" + lineend;
     response += "        <d:current-user-privilege-set>" + lineend;
@@ -119,7 +119,7 @@ function returnnotifications(comm) {
     const caldav_username = comm.getcaldav_username();
     const lineend = config.xml_lineend;
     response += "<d:response>" + lineend;
-    response += "<d:href>" + comm.getcalendarurl(null, "notifications") + "</d:href>" + lineend;
+    response += "<d:href>notifications/</d:href>" + lineend;
     response += "<d:propstat>" + lineend;
     response += "    <d:prop>" + lineend;
     response += "        <d:current-user-privilege-set>" + lineend;

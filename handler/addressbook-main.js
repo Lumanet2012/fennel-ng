@@ -68,7 +68,7 @@ function put(comm)
                 comm.setstandardheaders();
                 comm.setHeader("ETag", `"${existingVCard.etag}"`);
                 comm.setresponsecode(412);
-                comm.appendresbody(xh.getXMLHead());
+                comm.appendresbody(xh.getxmlhead());
                 comm.appendresbody("<d:error xmlns:d=\"DAV:\">" + config.xml_lineend);
                 comm.appendresbody("<d:precondition-failed>An If-None-Match header was specified, but the ETag matched (or * was specified).</d:precondition-failed>" + config.xml_lineend);
                 comm.appendresbody("</d:error>" + config.xml_lineend);
@@ -122,7 +122,7 @@ function proppatch(comm)
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.proppatch called`);
     comm.setstandardheaders();
     comm.setresponsecode(200);
-    comm.appendresbody(xh.getXMLHead());
+    comm.appendresbody(xh.getxmlhead());
     var body = comm.getreqbody();
     if(!body || body.trim().length === 0) {
         comm.setresponsecode(400);
@@ -130,7 +130,7 @@ function proppatch(comm)
         return;
     }
     try {
-        var xmlDoc = xml.parseXml(body);
+        var xmlDoc = xml.parsexml(body);
         var propUpdate = xmlDoc.propertyupdate;
         if(!propUpdate || !propUpdate.set || !propUpdate.set.prop) {
             LSE_Logger.warn(`[Fennel-NG CardDAV] No property update node found in proppatch`);

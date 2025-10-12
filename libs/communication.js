@@ -200,6 +200,16 @@ comm.prototype.getcalendarurl = function(caldav_username, calendaruri) {
     }
     return path;
 };
+comm.prototype.getaddressbookurl = function(caldav_username, addressbookuri) {
+    if(!caldav_username) {
+       caldav_username = this.getcaldav_username();
+    }
+    var path = config.public_route_prefix + '/card/' + caldav_username + '/';
+    if(addressbookuri) {
+       path += addressbookuri + '/';
+    }
+    return path;
+};
 comm.prototype.getcalendarhomeurl = function(caldav_username) {
     if(!caldav_username) {
         caldav_username = this.getcaldav_username();

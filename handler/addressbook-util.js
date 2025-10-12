@@ -1,4 +1,4 @@
-function getSupportedReportSet()
+function getsupportedreportset()
 {
     var response = "";
     response += "<d:supported-report-set>\r\n";
@@ -28,6 +28,6 @@ function getcurrentuserprivilegeset()
     return response;
 }
 module.exports = {
-    getSupportedReportSet: getSupportedReportSet,
+    getsupportedreportset: getsupportedreportset,
     getcurrentuserprivilegeset: getcurrentuserprivilegeset
 };

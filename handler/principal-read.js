@@ -1,6 +1,6 @@
 const {XMLParser}=require('fast-xml-parser');
-const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true});
-const xml={parsexmL:function(body){return parser.parse(body);}};
+const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix: true});
+const xml={parsexml:function(body){return parser.parse(body);}};
 const config=require('../config').config;
 const xh=require("../libs/xmlhelper");
 const principalutil=require('./principal-util');
@@ -25,43 +25,49 @@ function propfind(comm){
                 response+="";
                 break;
             case 'sync-token':
-                response+="<d:sync-token>http://sabredav.org/ns/sync/5</d:sync-token>";
+                response+="<d:sync-token>http://sabredav.org/ns/sync/5</d:sync-token>" + config.xml_lineend;
                 break;
             case 'supported-report-set':
                 response+=principalutil.getsupportedreportset(comm);
                 break;
             case 'principal-URL':
-                response+="<d:principal-URL><d:href>"+comm.getprincipalurl()+"</d:href></d:principal-URL>"+config.xml_lineend;
+                response+="<d:principal-URL><d:href>" + comm.getprincipalurl() + "</d:href></d:principal-URL>" + config.xml_lineend;
                 break;
             case 'displayname':
-                response+="<d:displayname>"+comm.getusername()+"</d:displayname>";
+                response+="<d:displayname>" + comm.getusername() + "</d:displayname>";
                 break;
             case 'principal-collection-set':
-                response+="<d:principal-collection-set><d:href>" + config.public_route_prefix + ("/p/")+"</d:href></d:principal-collection-set>";
+                response+="<d:principal-collection-set><d:href>" + config.public_route_prefix + ("/p/")+"</d:href></d:principal-collection-set>" + config.xml_lineend;
                 break;
             case 'current-user-principal':
-                response+="<d:current-user-principal><d:href>"+comm.getprincipalurl()+"</d:href></d:current-user-principal>";
+                response+="<d:current-user-principal><d:href>"+comm.getprincipalurl()+"</d:href></d:current-user-principal>" + config.xml_lineend;
+                break;
+            case 'current-user-privilege-set':
+                response+=principalutil.getcurrentuserprivilegeset();
                 break;
             case 'calendar-home-set':
-                response+="<cal:calendar-home-set><d:href>"+comm.getcalendarurl()+"</d:href></cal:calendar-home-set>";
+                response += "<cal:calendar-home-set xmlns:cal=\"urn:ietf:params:xml:ns:caldav\"><d:href>" + comm.getcalendarhomeurl() + "</d:href></cal:calendar-home-set>" + config.xml_lineend;
                 break;
             case 'calendar-user-address-set':
                 response+=principalutil.getcalendaruseraddressset(comm);
                 break;
             case 'schedule-inbox-URL':
-                response+="<cal:schedule-inbox-URL><d:href>"+comm.getcalendarurl()+"/inbox/</d:href></cal:schedule-inbox-URL>";
+                response+="<cal:schedule-inbox-URL><d:href>"+comm.getcalendarurl()+"/inbox/</d:href></cal:schedule-inbox-URL>" + config.xml_lineend;
                 break;
             case 'schedule-outbox-URL':
-                response+="<cal:schedule-outbox-URL><d:href>"+comm.getcalendarurl()+"/outbox/</d:href></cal:schedule-outbox-URL>";
+                response+="<cal:schedule-outbox-URL><d:href>"+comm.getcalendarurl()+"/outbox/</d:href></cal:schedule-outbox-URL>" + config.xml_lineend;
                 break;
             case 'addressbook-home-set':
-                response+="<card:addressbook-home-set><d:href>"+comm.getaddressbookurl()+"</d:href></card:addressbook-home-set>";
+                response+="<card:addressbook-home-set><d:href>"+comm.getaddressbookurl()+"</d:href></card:addressbook-home-set>" + config.xml_lineend;
                 break;
             case 'resourcetype':
-                response+="<d:resourcetype><d:principal/></d:resourcetype>";
+                response+="<d:resourcetype><d:principal/></d:resourcetype>" + config.xml_lineend;
                 break;
             case 'owner':
-                response+="<d:owner><d:href>"+comm.getprincipalurl()+"</d:href></d:owner>";
+                response+="<d:owner><d:href>"+comm.getprincipalurl()+"</d:href></d:owner>" + config.xml_lineend;
+                break;
+            case 'calendar-color':
+                response += "<a:calendar-color xmlns:a=\"http://apple.com/ns/ical/\" symbolic-color=\"custom\">#FF00FF</a:calendar-color>" + config.xml_lineend;
                 break;
             default:
                 if(child!='text'){

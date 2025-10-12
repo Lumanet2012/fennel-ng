@@ -27,10 +27,10 @@ function propfind(comm)
     comm.setstandardheaders();
     comm.setdavheaders();
     comm.setresponsecode(207);
-    comm.appendresbody(xh.getXMLHead());
+    comm.appendresbody(xh.getxmlhead());
     var response = "";
     var body = comm.getreqbody();
-    var xmlDoc = xml.parseXml(body);
+    var xmlDoc = xml.parsexml(body);
     var node = xmlDoc.propfind;
     var childs = node && node.prop ? Object.keys(node.prop) : [];
     var isRoot = true;
@@ -38,7 +38,7 @@ function propfind(comm)
     {
         isRoot = false;
     }
-    var username = comm.getUser().getusername();
+    var username = comm.getuser().getusername();
     if(isRoot === true)
     {
         response += returnPropfindRootProps(comm, childs);
@@ -126,7 +126,7 @@ function returnPropfindRootProps(comm, nodes)
     response += "<d:propstat>";
     response += "<d:prop>";
     var responseEtag = "";
-    var username = comm.getUser().getusername();
+    var username = comm.getuser().getusername();
     var len = nodes.length;
     for (var i=0; i < len; ++i)
     {
@@ -176,7 +176,7 @@ function returnPropfindRootProps(comm, nodes)
                 response += "<d:resourcetype><d:collection/></d:resourcetype>\r\n";
                 break;
             case 'supported-report-set':
-                response += getSupportedReportSet();
+                response += getsupportedreportset();
                 break;
             case 'sync-token':
                 response += "";
@@ -199,7 +199,7 @@ function returnPropfindRootProps(comm, nodes)
 }
 function returnPropfindProps(comm, nodes, adb, rsVCARD)
 {
-    var username = comm.getUser().getusername();
+    var username = comm.getuser().getusername();
     var response = "<d:response><d:href>" + comm.getfullurl("/card/" + username + "/" + adb.uri + "/") + "</d:href>";
     response += "<d:propstat>";
     response += "<d:prop>";
@@ -253,7 +253,7 @@ function returnPropfindProps(comm, nodes, adb, rsVCARD)
                 response += "<d:resourcetype><d:collection/><card:addressbook/></d:resourcetype>\r\n";
                 break;
             case 'supported-report-set':
-                response += getSupportedReportSet();
+                response += getsupportedreportset();
                 break;
             case 'sync-token':
                 response += "<d:sync-token>" + comm.getfullurl("/sync/addressbook/" + adb.synctoken) + "</d:sync-token>\r\n";
@@ -302,7 +302,7 @@ function gett(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.get called`);
     var vcardUri = comm.getFilenameFromPath(true);
-    var username = comm.getUser().getusername();
+    var username = comm.getuser().getusername();
     var addressbookUri = comm.getPathElement(3);
     ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
@@ -341,9 +341,9 @@ function report(comm)
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.report called`);
     comm.setstandardheaders();
     comm.setresponsecode(200);
-    comm.appendresbody(xh.getXMLHead());
+    comm.appendresbody(xh.getxmlhead());
     var body = comm.getreqbody();
-    var xmlDoc = xml.parseXml(body);
+    var xmlDoc = xml.parsexml(body);
     var rootKeys = Object.keys(xmlDoc);
     var rootName = rootKeys[0];
     switch(rootName)
@@ -363,7 +363,7 @@ function report(comm)
 function handleReportAddressbookMultiget(comm)
 {
     var body = comm.getreqbody();
-    var xmlDoc = xml.parseXml(body);
+    var xmlDoc = xml.parsexml(body);
     var multigetNode = xmlDoc['addressbook-multiget'];
     if(multigetNode != undefined)
     {
@@ -400,8 +400,8 @@ function handleReportAddressbookMultiget(comm)
 function handleReportSyncCollection(comm)
 {
     var body = comm.getreqbody();
-    var xmlDoc = xml.parseXml(body);
-    var username = comm.getUser().getusername();
+    var xmlDoc = xml.parsexml(body);
+    var username = comm.getuser().getusername();
     var addressbookUri = comm.getPathElement(3);
     var syncTokenNode = xmlDoc['sync-token'];
     var requestedSyncToken = 0;
@@ -480,7 +480,7 @@ function parseHrefToVCARDId(href)
 }
 function handleReportHrefs(comm, arrVCARDIds)
 {
-    var username = comm.getUser().getusername();
+    var username = comm.getuser().getusername();
     var addressbookUri = comm.getPathElement(3);
     ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
@@ -523,7 +523,7 @@ function handleReportHrefs(comm, arrVCARDIds)
         comm.flushresponse();
     });
 }
-function getSupportedReportSet()
+function getsupportedreportset()
 {
     var response = "";
     response += "<d:supported-report-set>\r\n";

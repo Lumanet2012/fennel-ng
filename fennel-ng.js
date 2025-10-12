@@ -64,6 +64,8 @@ function setuproutes() {
     }
     crossroads.addRoute(prefix + '/', onhitroot);
     crossroads.addRoute(prefix + '/.well-known/{type}', onhitwellknown);
+    crossroads.addRoute(prefix + '/p', onhitprincipal);
+    crossroads.addRoute(prefix + '/p/', onhitprincipal);
     crossroads.addRoute(prefix + '/p/{params*}', onhitprincipal);
     crossroads.addRoute(prefix + '/cal/', onhitcalendarroot);
     crossroads.addRoute(prefix + '/cal', onhitcalendarroot);
@@ -166,8 +168,14 @@ function onhitprincipal(comm, params)
             LSE_Logger.debug(`[Fennel-NG DEBUG] User: ${comm.getuser().getusername()}`);
             LSE_Logger.debug('[Fennel-NG DEBUG] ==================================');
         }
-        comm.params = params;
-        if(!comm.checkpermission('/p/' + (params || ''), comm.getreq().method))
+        if(!params || params === '') {
+            LSE_Logger.debug('[Fennel-NG DEBUG] Principal root hit, returning current-user-principal');
+            comm.params = '';
+            handler.handleprincipal(comm);
+            return;
+       }
+       comm.params = params;
+       if(!comm.checkpermission('/p/' + (params || ''), comm.getreq().method))
         {
             const res = comm.getres();
             if(config.LSE_Loglevel >= 1) {
@@ -180,7 +188,7 @@ function onhitprincipal(comm, params)
         }
         handler.handleprincipal(comm);
     } catch(error) {
-        LSE_Logger.error(`[Fennel-NG] Error in onHitPrincipal: ${error.message}`);
+        LSE_Logger.error(`[Fennel-NG] Error in onhitprincipal: ${error.message}`);
         LSE_Logger.error(`[Fennel-NG DEBUG] Stack: ${error.stack}`);
         if(comm && comm.getres && !comm.getres().headersSent) {
             comm.getres().writeHead(500);

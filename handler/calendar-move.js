@@ -8,7 +8,7 @@ function move(comm)
     var ics_id = comm.getFilenameFromPath(true);
     var calendar = comm.getCalIdFromURL();
     var destination = "";
-    var req = comm.getReq();
+    var req = comm.getreq();
     var headers = req.headers;
     for(var header in headers)
     {

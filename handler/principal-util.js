@@ -10,6 +10,23 @@ function getcalendaruseraddressset(comm){
     response+="        </cal:calendar-user-address-set>"+config.xml_lineend;
     return response;
 }
+function getcurrentuserprivilegeset() {
+    let response = "";
+    response += "<d:current-user-privilege-set>" + config.xml_lineend;
+    response += "<d:privilege><cal:read-free-busy/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write-acl/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write-content/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:write-properties/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:bind/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:unbind/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:unlock/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:read/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:read-acl/></d:privilege>" + config.xml_lineend;
+    response += "<d:privilege><d:read-current-user-privilege-set/></d:privilege>" + config.xml_lineend;
+    response += "</d:current-user-privilege-set>" + config.xml_lineend;
+    return response;
+}
 function getsupportedreportset(comm){
     let response="";
     response+="        <d:supported-report-set>"+config.xml_lineend;
@@ -75,6 +92,7 @@ function replypropertycalendarproxywritefor(comm){
     comm.appendresbody("</d:multistatus>"+config.xml_lineend);
 }
 module.exports={
+    getcurrentuserprivilegeset:getcurrentuserprivilegeset,
     getcalendaruseraddressset:getcalendaruseraddressset,
     getsupportedreportset:getsupportedreportset,
     getprincipalsearchpropertyset:getprincipalsearchpropertyset,

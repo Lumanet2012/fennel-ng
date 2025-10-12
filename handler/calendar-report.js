@@ -13,10 +13,10 @@ function report(comm){
     }
     comm.setstandardheaders();
     comm.setresponsecode(207);
-    comm.appendresbody(xh.getXMLHead());
+    comm.appendresbody(xh.getxmlhead());
     const body=comm.getreqbody();
-    const xmldoc=xml.parseXml(body);
-    const rootkeys=Object.keys(xmldoc);
+    const xmldoc=xml.parsexml(body);
+    const rootkeys=Object.keys(xmldoc).filter(key => key !== '?xml' && key !== '#text');
     const rootname=rootkeys[0];
     switch(rootname){
         case 'sync-collection':
@@ -123,7 +123,7 @@ function handlereportcalendarmultiget(comm){
         LSE_Logger.debug(`[Fennel-NG CalDAV] handleReportCalendarMultiget`);
     }
     const body=comm.getreqbody();
-    const xmldoc=xml.parseXml(body);
+    const xmldoc=xml.parsexml(body);
     const hrefnodes=xmldoc.href;
     if(hrefnodes!=undefined){
         let arrhrefs=[];
@@ -175,7 +175,7 @@ function handlereporthrefs(comm,arreventuris){
             response+="<d:href>"+requrl+calendarobject.uri+"</d:href>"+config.xml_lineend;
             response+="<d:propstat><d:prop>"+config.xml_lineend;
             const body=comm.getreqbody();
-            const xmldoc=xml.parseXml(body);
+            const xmldoc=xml.parsexml(body);
             const nodeprops=xmldoc.prop?Object.keys(xmldoc.prop):[];
             const len=nodeprops.length;
             for(let i=0;i<len;++i){
@@ -212,7 +212,7 @@ function handlereportsynccollection(comm){
         LSE_Logger.debug(`[Fennel-NG CalDAV] handleReportSyncCollection`);
     }
     const body=comm.getreqbody();
-    const xmldoc=xml.parseXml(body);
+    const xmldoc=xml.parsexml(body);
     const synctokennode=xmldoc['sync-token'];
     if(synctokennode!=undefined){
         const calendaruri=comm.getPathElement(3);

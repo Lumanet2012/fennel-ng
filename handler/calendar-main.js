@@ -8,6 +8,7 @@ const calendarobjects=require('../libs/db').CALENDAROBJECTS;
 const calendars=require('../libs/db').calendars;
 const calendarutil=require('./calendar-util');
 const calendarread=require('./calendar-read');
+const calendarreport=require('./calendar-report');
 const calendarwrite=require('./calendar-write');
 const calendardel=require('./calendar-del');
 const calendarmove=require('./calendar-move');
@@ -27,7 +28,7 @@ function handleroot(comm){
             options(comm);
             break;
         case 'REPORT':
-            calendarread.report(comm);
+            calendarreport.report(comm);
             break;
         case 'MKCALENDAR':
             calendarwrite.mkcalendar(comm);
@@ -59,7 +60,7 @@ function handlecalendar(comm){
             options(comm);
             break;
         case 'REPORT':
-            calendarread.report(comm);
+            calendarreport.report(comm);
             break;
         case 'PUT':
             calendarwrite.put(comm);
