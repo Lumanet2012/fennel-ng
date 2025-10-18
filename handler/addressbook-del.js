@@ -1,11 +1,8 @@
 var config = require('../config').config;
 var redis = require('../libs/redis');
-var VCARDS = require('../libs/db').VCARDS;
-var ADDRESSBOOKS = require('../libs/db').ADDRESSBOOKS;
-var ADDRESSBOOKCHANGES = require('../libs/db').ADDRESSBOOKCHANGES;
-module.exports = {
-    del: del
-};
+var vcards = require('../libs/db').vcards;
+var addressbooks = require('../libs/db').addressbooks;
+var addressbookchanges = require('../libs/db').addressbookchanges;
 function del(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.delete called`);
@@ -26,7 +23,7 @@ function del(comm)
     {
         var addressbookUri = comm.getPathElement(3);
         LSE_Logger.debug(`[Fennel-NG CardDAV] Deleting addressbook: ${addressbookUri}`);
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+        addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
         {
             if(adb === null)
             {
@@ -71,7 +68,7 @@ function del(comm)
         var vcardUri = comm.getFilenameFromPath(true);
         var addressbookUri = comm.getPathElement(3);
         LSE_Logger.debug(`[Fennel-NG CardDAV] Deleting vCard: ${vcardUri} from addressbook: ${addressbookUri}`);
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+        addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
         {
             if(!adb)
             {
@@ -80,7 +77,7 @@ function del(comm)
                 comm.flushresponse();
                 return;
             }
-            return VCARDS.findOne({ where: {addressbookid: adb.id, uri: vcardUri + '.vcf'}});
+            return vcards.findone({ where: {addressbookid: adb.id, uri: vcardUri + '.vcf'}});
         }).then(function(vcard)
         {
             if(!vcard)
@@ -115,4 +112,6 @@ function del(comm)
         });
     }
 }
-
+module.exports = {
+    del: del
+}

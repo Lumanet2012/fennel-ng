@@ -1,10 +1,7 @@
-const {XMLParser}=require('fast-xml-parser');
-const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true});
-const xml={parsexml:function(body){return parser.parse(body);}};
 const config=require('../config').config;
 const xh=require("../libs/xmlhelper");
 const redis=require('../libs/redis');
-const calendarobjects=require('../libs/db').CALENDAROBJECTS;
+const calendarobjects=require('../libs/db').calendarobjects;
 const calendars=require('../libs/db').calendars;
 const calendarutil=require('./calendar-util');
 const calendarread=require('./calendar-read');
@@ -102,5 +99,4 @@ function options(comm){
 module.exports={
     handleroot:handleroot,
     handlecalendar:handlecalendar
-};
-
+}

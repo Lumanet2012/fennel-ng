@@ -30,4 +30,4 @@ function getcurrentuserprivilegeset()
 module.exports = {
     getsupportedreportset: getsupportedreportset,
     getcurrentuserprivilegeset: getcurrentuserprivilegeset
-};
+}

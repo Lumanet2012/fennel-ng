@@ -190,4 +190,4 @@ module.exports = {
     getacl: getacl,
     returnoutbox: returnoutbox,
     returnnotifications: returnnotifications
-};
+}

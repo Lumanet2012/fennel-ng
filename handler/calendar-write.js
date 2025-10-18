@@ -1,12 +1,12 @@
-const {XMLParser}=require('fast-xml-parser');
-const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true});
+const fastxmlparser=require('fast-xml-parser');
+const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
 const xml={parsexml:function(body){return parser.parse(body);}};
 const config=require('../config').config;
 const xh=require("../libs/xmlhelper");
 const redis=require('../libs/redis');
 const crypto=require('crypto');
 const icsparser=require('../libs/ics-main');
-const calendarobjects=require('../libs/db').CALENDAROBJECTS;
+const calendarobjects=require('../libs/db').calendarobjects;
 const calendars=require('../libs/db').calendars;
 function put(comm){
     if(config.LSE_Loglevel>=1){
@@ -24,7 +24,7 @@ function put(comm){
         LSE_Logger.debug(`[Fennel-NG CalDAV] PUT eventuri: ${eventuri}, calendaruri: ${calendaruri}`);
         LSE_Logger.debug(`[Fennel-NG CalDAV] If-Match: ${ifmatchheader}, If-None-Match: ${ifnonematchheader}`);
     }
-    calendars.findOne({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
+    calendars.findone({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
         if(!calendar){
             if(config.LSE_Loglevel>=1){
                 LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found: ${calendaruri}`);
@@ -33,7 +33,7 @@ function put(comm){
             comm.flushresponse();
             return;
         }
-        calendarobjects.findOne({where:{calendarid:calendar.id,uri:eventuri}}).then(function(existingobject){
+        calendarobjects.findone({where:{calendarid:calendar.id,uri:eventuri}}).then(function(existingobject){
             let iscreating=false;
             if(existingobject){
                 if(ifnonematchheader==='*'){
@@ -173,7 +173,7 @@ function mkcalendar(comm){
             }
         }
     }
-    calendars.findOne({where:{principaluri:principaluri,uri:calendaruri}}).then(function(existingcalendar){
+    calendars.findone({where:{principaluri:principaluri,uri:calendaruri}}).then(function(existingcalendar){
         if(existingcalendar){
             if(config.LSE_Loglevel>=1){
                 LSE_Logger.warn(`[Fennel-NG CalDAV] calendar already exists: ${calendaruri}`);
@@ -212,7 +212,7 @@ function mkcalendar(comm){
 }
 function updatecalendarsynctoken(calendarid){
     return new Promise(function(resolve,reject){
-        calendars.findOne({where:{id:calendarid}}).then(function(calendar){
+        calendars.findone({where:{id:calendarid}}).then(function(calendar){
             if(!calendar){
                 reject(new Error('calendar not found'));
                 return;
@@ -227,4 +227,4 @@ module.exports={
     put:put,
     proppatch:proppatch,
     mkcalendar:mkcalendar
-};
+}

@@ -111,6 +111,12 @@ comm.prototype.flushresponse = function() {
     this.res.write(this.resbody);
     this.res.end();
 };
+comm.prototype.asyncflushresponse = function() {
+    return Promise.resolve().then(() => {
+        this.res.write(this.resbody);
+        this.res.end();
+    });
+};
 comm.prototype.pushoptionsresponse = function() {
     this.setstandardheaders();
     this.setdavheaders();
@@ -250,7 +256,7 @@ comm.prototype.geturlasarray = function() {
     }
     return aurl;
 };
-comm.prototype.getFilenameFromPath = function(removeending) {
+comm.prototype.getfilenamefrompath = function(removeending) {
     const aurl = this.geturlasarray();
     if(aurl.length <= 0) {
         if(config.LSE_Loglevel >= 1) {
@@ -267,7 +273,7 @@ comm.prototype.getFilenameFromPath = function(removeending) {
     }
     return filename;
 };
-comm.prototype.getCalIdFromURL = function() {
+comm.prototype.getcalidfromurl = function() {
     const aurl = this.geturlasarray();
     if(aurl.length > 3) {
         return aurl[3];
@@ -278,17 +284,17 @@ comm.prototype.geturlelementsize = function() {
     const aurl = this.geturlasarray();
     return aurl.length;
 };
-comm.prototype.getHeader = function(headername) {
+comm.prototype.getheader = function(headername) {
     return this.req.headers[headername.toLowerCase()];
 };
-comm.prototype.getPathElement = function(index) {
+comm.prototype.getpathelement = function(index) {
     const aurl = this.geturlasarray();
     if(aurl && aurl.length > index) {
         return aurl[index];
     }
     return undefined;
 };
-comm.prototype.stringEndsWith = function(str, suffix) {
+comm.prototype.stringendswith = function(str, suffix) {
     return str && str.length >= suffix.length && str.substring(str.length - suffix.length) === suffix;
 };
 module.exports = comm;

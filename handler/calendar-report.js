@@ -1,10 +1,10 @@
-const {XMLParser}=require('fast-xml-parser');
-const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true});
-const xml={parseXml:function(body){return parser.parse(body);}};
+const fastxmlparser=require('fast-xml-parser');
+const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
+const xml={parsexml:function(body){return parser.parse(body);}};
 const moment=require('moment');
 const config=require('../config').config;
 const xh=require("../libs/xmlhelper");
-const calendarobjects=require('../libs/db').CALENDAROBJECTS;
+const calendarobjects=require('../libs/db').calendarobjects;
 const calendars=require('../libs/db').calendars;
 const calendarutil=require('./calendar-util');
 function report(comm){
@@ -45,7 +45,7 @@ function handlereportcalendarquery(comm,xmldoc){
     const username=comm.getusername();
     const principaluri='principals/'+username;
     const filter={calendarid:null};
-    calendars.findOne({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
+    calendars.findone({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
         if(!calendar){
             if(config.LSE_Loglevel>=1){
                 LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found for query: ${calendaruri}`);
@@ -75,7 +75,7 @@ function handlereportcalendarquery(comm,xmldoc){
                 }
             }
         }
-        calendarobjects.findAndCountAll({where:filter}).then(function(result){
+        calendarobjects.findandcountall({where:filter}).then(function(result){
             const nodeprop=xmldoc.prop;
             let response="";
             const nodeprops=nodeprop?Object.keys(nodeprop):[];
@@ -165,7 +165,7 @@ function handlereporthrefs(comm,arreventuris){
     if(config.LSE_Loglevel>=2){
         LSE_Logger.debug(`[Fennel-NG CalDAV] handleReportHrefs`);
     }
-    calendarobjects.findAndCountAll({where:{uri:arreventuris}}).then(function(result){
+    calendarobjects.findandcountall({where:{uri:arreventuris}}).then(function(result){
         let response="";
         for(let i=0;i<result.count;++i){
             const calendarobject=result.rows[i];
@@ -218,7 +218,7 @@ function handlereportsynccollection(comm){
         const calendaruri=comm.getPathElement(3);
         const username=comm.getusername();
         const principaluri='principals/'+username;
-        calendars.findOne({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
+        calendars.findone({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
             if(!calendar){
                 if(config.LSE_Loglevel>=1){
                     LSE_Logger.warn(`[Fennel-NG CalDAV] Calendar not found for sync: ${calendaruri}`);
@@ -227,7 +227,7 @@ function handlereportsynccollection(comm){
                 comm.flushresponse();
                 return;
             }
-            calendarobjects.findAndCountAll({where:{calendarid:calendar.id}}).then(function(result){
+            calendarobjects.findandcountall({where:{calendarid:calendar.id}}).then(function(result){
                 let response="";
                 for(let j=0;j<result.count;++j){
                     const calendarobject=result.rows[j];
@@ -278,5 +278,4 @@ module.exports={
     handlereportsynccollection:handlereportsynccollection,
     parsehreftoeventuri:parsehreftoeventuri,
     handlereporthrefs:handlereporthrefs
-};
-
+}

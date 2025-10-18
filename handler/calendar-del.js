@@ -1,6 +1,6 @@
 var config = require('../config').config;
 var redis = require('../libs/redis');
-var CALENDAROBJECTS = require('../libs/db').CALENDAROBJECTS;
+var calendarobjects = require('../libs/db').calendarobjects;
 var calendars = require('../libs/db').calendars;
 function del(comm)
 {
@@ -22,7 +22,7 @@ function del(comm)
         var calendarUri = comm.getPathElement(3);
         var username = comm.getusername();
         var principalUri = 'principals/' + username;
-        calendars.findOne({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
+        calendars.findone({ where: {principaluri: principalUri, uri: calendarUri} }).then(function(calendar)
         {
             if(calendar === null)
             {
@@ -43,7 +43,7 @@ function del(comm)
     else
     {
         var eventUri = comm.getFilenameFromPath(false);
-        CALENDAROBJECTS.findOne({ where: {uri: eventUri}}).then(function(calendarObject)
+        calendarobjects.findone({ where: {uri: eventUri}}).then(function(calendarObject)
         {
             if(calendarObject === null)
             {
@@ -69,7 +69,7 @@ function del(comm)
 function updateCalendarSyncToken(calendarId)
 {
     return new Promise(function(resolve, reject) {
-        calendars.findOne({ where: {id: calendarId} }).then(function(calendar) {
+        calendars.findone({ where: {id: calendarId} }).then(function(calendar) {
             if (!calendar) {
                 reject(new Error('Calendar not found'));
                 return;
@@ -82,4 +82,4 @@ function updateCalendarSyncToken(calendarId)
 }
 module.exports = {
     del: del
-};
+}

@@ -42,4 +42,4 @@ function move(comm)
 }
 module.exports = {
     move: move
-};
+}

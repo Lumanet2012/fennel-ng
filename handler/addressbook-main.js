@@ -1,34 +1,15 @@
-const { XMLParser } = require('fast-xml-parser');
-const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: "@_",
-    textNodeName: "#text",
-    parseAttributeValue: true
-});
-var xml = {
-    parseXml: function(body) {
-        return parser.parse(body);
-    }
-};
+const fastxmlparser=require('fast-xml-parser');
+const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
+const xml={parsexml:function(body){return parser.parse(body);}};
 var config = require('../config').config;
 var xh = require("../libs/xmlhelper");
 var redis = require('../libs/redis');
-var VCARDS = require('../libs/db').VCARDS;
-var ADDRESSBOOKS = require('../libs/db').ADDRESSBOOKS;
-var ADDRESSBOOKCHANGES = require('../libs/db').ADDRESSBOOKCHANGES;
+var vcards = require('../libs/db').vcards;
+var addressbooks = require('../libs/db').addressbooks;
+var addressbookchanges = require('../libs/db').addressbookchanges;
 var addressbookRead = require('./addressbook-read');
 var addressbookDel = require('./addressbook-del');
 var addressbookMove = require('./addressbook-move');
-module.exports = {
-    propfind: addressbookRead.propfind,
-    proppatch: proppatch,
-    report: addressbookRead.report,
-    options: options,
-    put: put,
-    get: addressbookRead.gett,
-    delete: addressbookDel.del,
-    move: addressbookMove.move
-};
 function put(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.put called`);
@@ -39,7 +20,7 @@ function put(comm)
     var match = body.search(/X-ADDRESSBOOKSERVER-KIND:group/);
     var isGroup = (match >= 0);
     LSE_Logger.debug(`[Fennel-NG CardDAV] Putting vCard: ${vcardUri} to addressbook: ${addressbookUri}, isGroup: ${isGroup}`);
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+    addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
@@ -60,7 +41,7 @@ function put(comm)
             etag: etag,
             size: size
         };
-        return VCARDS.findOne({ where: {addressbookid: adb.id, uri: vcardUri}}).then(function(existingVCard)
+        return vcards.findone({ where: {addressbookid: adb.id, uri: vcardUri}}).then(function(existingVCard)
         {
             if(existingVCard && ifNoneMatch && ifNoneMatch === "*")
             {
@@ -90,7 +71,7 @@ function put(comm)
                 }
                 else
                 {
-                    return VCARDS.create(defaults);
+                    return vcards.create(defaults);
                 }
             }).then(function(vcard)
             {
@@ -142,7 +123,7 @@ function proppatch(comm)
         var addressbookUri = comm.getCalIdFromURL();
         var username = comm.getusername();
         var response = "";
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+        addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
         {
             if(!adb)
             {
@@ -228,4 +209,14 @@ function generateETag(content)
 {
     var crypto = require('crypto');
     return crypto.createHash('md5').update(content).digest('hex');
+}
+module.exports = {
+    propfind: addressbookRead.propfind,
+    proppatch: proppatch,
+    report: addressbookRead.report,
+    options: options,
+    put: put,
+    get: addressbookRead.gett,
+    delete: addressbookDel.del,
+    move: addressbookMove.move
 }

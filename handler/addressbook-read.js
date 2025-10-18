@@ -1,26 +1,12 @@
-const { XMLParser } = require('fast-xml-parser');
-const parser = new XMLParser({ 
-    ignoreAttributes: false,
-    attributeNamePrefix: "@_",
-    textNodeName: "#text",
-    parseAttributeValue: true
-});
-var xml = {
-    parseXml: function(body) {
-        return parser.parse(body);
-    }
-};
+const fastxmlparser=require('fast-xml-parser');
+const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
+const xml={parsexml:function(body){return parser.parse(body);}};
 var xh = require("../libs/xmlhelper");
 var redis = require('../libs/redis');
-var VCARDS = require('../libs/db').VCARDS;
-var ADDRESSBOOKS = require('../libs/db').ADDRESSBOOKS;
-var ADDRESSBOOKCHANGES = require('../libs/db').ADDRESSBOOKCHANGES;
+var vcards = require('../libs/db').vcards;
+var addressbooks = require('../libs/db').addressbooks;
+var addressbookchanges = require('../libs/db').addressbookchanges;
 var addressbookUtil = require('./addressbook-util');
-module.exports = {
-    propfind: propfind,
-    report: report,
-    gett: gett
-};
 function propfind(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.propfind called`);
@@ -57,7 +43,7 @@ function propfind(comm)
                     adb.synctoken = parseInt(redisSyncToken);
                     LSE_Logger.debug(`[Fennel-NG CardDAV] Using Redis sync token: ${adb.synctoken} for addressbook ${adb.uri}`);
                 }
-                return VCARDS.findAndCountAll({ where: {addressbookid: adb.id}});
+                return VCARDS.findandcountall({ where: {addressbookid: adb.id}});
             }).then(function(rsVCARDS)
             {
                 response += returnPropfindProps(comm, childs, adb, rsVCARDS);
@@ -87,7 +73,7 @@ function propfind(comm)
     else
     {
         var adbUri = comm.getPathElement(3);
-        ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: adbUri} }).then(function(adb)
+        addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: adbUri} }).then(function(adb)
         {
             if(!adb)
             {
@@ -103,7 +89,7 @@ function propfind(comm)
                     adb.synctoken = parseInt(redisSyncToken);
                     LSE_Logger.debug(`[Fennel-NG CardDAV] Using Redis sync token: ${adb.synctoken} for addressbook ${adb.uri}`);
                 }
-                return VCARDS.findAndCountAll({ where: {addressbookid: adb.id}});
+                return VCARDS.findandcountall({ where: {addressbookid: adb.id}});
             }).then(function(rsVCARDS)
             {
                 response += returnPropfindProps(comm, childs, adb, rsVCARDS);
@@ -304,7 +290,7 @@ function gett(comm)
     var vcardUri = comm.getFilenameFromPath(true);
     var username = comm.getuser().getusername();
     var addressbookUri = comm.getPathElement(3);
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+    addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
@@ -313,7 +299,7 @@ function gett(comm)
             comm.flushresponse();
             return;
         }
-        return VCARDS.findOne({ where: {addressbookid: adb.id, uri: vcardUri + '.vcf'}});
+        return vcards.findone({ where: {addressbookid: adb.id, uri: vcardUri + '.vcf'}});
     }).then(function(vcard)
     {
         if(!vcard)
@@ -414,7 +400,7 @@ function handleReportSyncCollection(comm)
             requestedSyncToken = parseInt(tokenMatch[1]);
         }
     }
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+    addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
@@ -433,7 +419,7 @@ function handleReportSyncCollection(comm)
                 comm.flushresponse();
                 return;
             }
-            return ADDRESSBOOKCHANGES.findAll({
+            return ADDRESSBOOKCHANGES.findall({
                 where: {
                     addressbookid: adb.id,
                     synctoken: { $gt: requestedSyncToken }
@@ -482,7 +468,7 @@ function handleReportHrefs(comm, arrVCARDIds)
 {
     var username = comm.getuser().getusername();
     var addressbookUri = comm.getPathElement(3);
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
+    addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: addressbookUri} }).then(function(adb)
     {
         if(!adb)
         {
@@ -492,7 +478,7 @@ function handleReportHrefs(comm, arrVCARDIds)
             return;
         }
         var vcardUris = arrVCARDIds.map(function(id) { return id + '.vcf'; });
-        return VCARDS.findAll({ where: {addressbookid: adb.id, uri: vcardUris}});
+        return vcards.findall({ where: {addressbookid: adb.id, uri: vcardUris}});
     }).then(function(vcards)
     {
         var response = "";
@@ -553,3 +539,8 @@ function getcurrentuserprivilegeset()
     return response;
 }
 
+module.exports = {
+    propfind: propfind,
+    report: report,
+    gett: gett
+}

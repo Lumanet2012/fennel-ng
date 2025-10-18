@@ -1,6 +1,5 @@
-const {XMLParser}=require('fast-xml-parser');
-const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true});
-const config=require('../config').config;
+const fastxmlparser=require('fast-xml-parser');
+const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
 const xml={parsexml:function(body){return parser.parse(body);}};
 function getcalendaruseraddressset(comm){
     let response="";
@@ -98,5 +97,4 @@ module.exports={
     getprincipalsearchpropertyset:getprincipalsearchpropertyset,
     isreportpropertycalendarproxywritefor:isreportpropertycalendarproxywritefor,
     replypropertycalendarproxywritefor:replypropertycalendarproxywritefor
-};
-
+}

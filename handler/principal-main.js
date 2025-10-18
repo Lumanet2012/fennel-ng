@@ -34,5 +34,4 @@ module.exports={
     proppatch:proppatch,
     report:principalread.report,
     options:options
-};
-
+}

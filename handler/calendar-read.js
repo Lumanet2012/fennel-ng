@@ -1,11 +1,11 @@
-const {XMLParser}=require('fast-xml-parser');
-const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix: true});
+const fastxmlparser=require('fast-xml-parser');
+const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
 const xml={parsexml:function(body){return parser.parse(body);}};
 const moment=require('moment');
 const config=require('../config').config;
 const xh=require("../libs/xmlhelper");
 const redis=require('../libs/redis');
-const calendarobjects=require('../libs/db').CALENDAROBJECTS;
+const calendarobjects=require('../libs/db').calendarobjects;
 const calendars=require('../libs/db').calendars;
 const calendarutil=require('./calendar-util');
 const calendarreport=require('./calendar-report');
@@ -15,7 +15,7 @@ function gett(comm){
     }
     comm.setHeader("Content-Type","text/calendar");
     const eventuri=comm.getFilenameFromPath(false);
-    calendarobjects.findOne({where:{uri:eventuri}}).then(function(calendarobject){
+    calendarobjects.findone({where:{uri:eventuri}}).then(function(calendarobject){
         if(calendarobject===null){
             if(config.LSE_Loglevel>=1){
                 LSE_Logger.warn(`[Fennel-NG CalDAV] err: could not find calendar event`);
@@ -37,28 +37,25 @@ function propfind(comm){
     const childs=node&&node.prop?Object.keys(node.prop):[];
     const username=comm.getusername();
     const caldav_username=comm.getcaldav_username();
-    if(comm.geturlelementsize()===4){
+    if(!comm.params || comm.params===''){
         handlepropfindforuser(comm);
         return;
     }
-    const arrurl=comm.geturlasarray();
-    if(arrurl.length===5){
-        const calendaruri=arrurl[3];
-        switch(calendaruri){
-            case 'notifications':
-                handlepropfindforcalendarnotifications(comm);
-                break;
-            case 'inbox':
-                handlepropfindforcalendarinbox(comm);
-                break;
-            case 'outbox':
-                handlepropfindforcalendaroutbox(comm);
-                break;
-            default:
-                handlepropfindforcalendarid(comm,calendaruri);
-                break;
-        }
-        return;
+    const pathparts=comm.params.split('/').filter(p=>p);
+    const calendaruri=pathparts[0];
+    switch(calendaruri){
+        case 'notifications':
+            handlepropfindforcalendarnotifications(comm);
+            break;
+        case 'inbox':
+            handlepropfindforcalendarinbox(comm);
+            break;
+        case 'outbox':
+            handlepropfindforcalendaroutbox(comm);
+            break;
+        default:
+            handlepropfindforcalendarid(comm,calendaruri);
+            break;
     }
 }
 function handlepropfindforuser(comm){
@@ -77,7 +74,7 @@ function handlepropfindforuser(comm){
     const username=comm.getusername();
     const caldav_username=comm.getcaldav_username();
     const principaluri='principals/'+caldav_username;
-    calendars.findAndCountAll({where:{principaluri:principaluri}}).then(function(result){
+    calendars.findandcountall({where:{principaluri:principaluri}}).then(function(result){
         let response="";
         response+="<d:response>"+config.xml_lineend;
         response+="<d:href>" + config.public_route_prefix + "/cal/" + comm.getcaldav_username() + "/" + "</d:href>"+config.xml_lineend;
@@ -173,11 +170,11 @@ function handlepropfindforcalendarnotifications(comm){
 }
 function handlepropfindforcalendarid(comm,calendaruri){
     if(config.LSE_Loglevel>=2){
-        LSE_Logger.debug(`[Fennel-NG CalDAV] handlePropfindForCalendarId`);
+        LSE_Logger.info(`[Fennel-NG CalDAV] handlepropfindforcalendarid called with calendarUri: ${calendaruri}`);
     }
     const caldav_username=comm.getcaldav_username();
     const principaluri='principals/'+caldav_username;
-    calendars.findOne({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
+    calendars.findone({where:{principaluri:principaluri,uri:calendaruri}}).then(function(calendar){
         comm.setstandardheaders();
         comm.setdavheaders();
         comm.setresponsecode(207);
@@ -199,7 +196,7 @@ function handlepropfindforcalendarid(comm,calendaruri){
             const node=xmldoc.propfind;
             const childs=node&&node.prop?Object.keys(node.prop):[];
             const redisclient=redis.initializeredis();
-            redisclient.get(`sync:cal:${calendar.id}`).then(function(cachedsynctoken){
+            return redisclient.get(`sync:cal:${calendar.id}`).then(function(cachedsynctoken){
                 const synctoken=cachedsynctoken||calendar.synctoken;
                 const response=returnpropfindelements(comm,calendar,childs,synctoken);
                 comm.appendresbody("<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:card=\"urn:ietf:params:xml:ns:carddav\">"+config.xml_lineend);
@@ -235,8 +232,9 @@ function handlepropfindforcalendarid(comm,calendaruri){
                 comm.appendresbody("</d:multistatus>"+config.xml_lineend);
             });
         }
-        comm.flushresponse();
-    });
+    }).then(function() {
+    return comm.asyncflushresponse();
+});
 }
 function returnpropfindelements(comm,calendar,childs,synctoken){
     if(config.LSE_Loglevel>=2){
@@ -262,7 +260,6 @@ function returnpropfindelements(comm,calendar,childs,synctoken){
                 response+="";
                 break;
             case 'calendar-color':
-            case 'A:calendar-color':
                 response+="<A:calendar-color xmlns:A=\"http://apple.com/ns/ical/\">"+(calendar.calendarcolor||"#0066CC")+"</A:calendar-color>"+config.xml_lineend;
                 break;
             case 'calendar-description':
@@ -272,18 +269,15 @@ function returnpropfindelements(comm,calendar,childs,synctoken){
                 response+="<cal:calendar-free-busy-set><d:href>"+comm.getcalendarurl(null,calendar.uri)+"</d:href></cal:calendar-free-busy-set>"+config.xml_lineend;
                 break;
             case 'calendar-order':
-            case 'A:calendar-order':
                 response+="<A:calendar-order xmlns:A=\"http://apple.com/ns/ical/\">"+(calendar.calendarorder||"0")+"</A:calendar-order>"+config.xml_lineend;
                 break;
             case 'calendar-timezone':
                 response+="";
                 break;
             case 'current-user-privilege-set':
-            case 'D:current-user-privilege-set':
                 response+=calendarutil.getcurrentuserprivilegeset();
                 break;
             case 'displayname':
-            case 'D:displayname':
                 response+="<d:displayname>"+(calendar.displayname||"Main Calendar")+"</d:displayname>"+config.xml_lineend;
                 break;
             case 'getctag':
@@ -294,7 +288,6 @@ function returnpropfindelements(comm,calendar,childs,synctoken){
             case 'checksum-versions':
                 break;
             case 'sync-token':
-            case 'D:sync-token':
                 response+="<d:sync-token>"+config.public_route_prefix+"/sync/calendar/"+synctoken+"</d:sync-token>" + config.xml_lineend;
                 break;
             case 'acl':
@@ -312,7 +305,6 @@ function returnpropfindelements(comm,calendar,childs,synctoken){
                 response+="";
                 break;
             case 'resourcetype':
-            case 'D:resourcetype':
                 response+="<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>"+config.xml_lineend;
                 break;
             case 'schedule-calendar-transp':
@@ -328,22 +320,26 @@ function returnpropfindelements(comm,calendar,childs,synctoken){
                 response+=calendarutil.getsupportedreportset(false);
                 break;
             case 'supportedlock':
-            case 'D:supportedlock':
                 response+="<d:supportedlock/>" + config.xml_lineend;
                 break;
             case 'supported-report-set':
-            case 'D:supported-report-set':
                 response+=calendarutil.getsupportedreportset(false);
                 break;
             case 'supported-calendar-component-set':
-            case 'L:supported-calendar-component-set':
                 response+="<cal:supported-calendar-component-set><cal:comp name=\"VEVENT\"/></cal:supported-calendar-component-set>" + config.xml_lineend;
                 break;
             case 'headervalue':
-            case 'I:headervalue':
                 break;
             case 'max-image-size':
-            case 'R:max-image-size':
+                break;
+            case 'current-user-principal':
+                response+="<d:current-user-principal><d:href>"+comm.getprincipalurl()+"</d:href></d:current-user-principal>"+config.xml_lineend;
+                break;
+            case 'current-user-privilege-set':
+                response+=calendarutil.getcurrentuserprivilegeset();
+                break;
+            case 'getctag':
+                response+="<cs:getctag xmlns:cs=\"http://calendarserver.org/ns/\">"+synctoken+"</cs:getctag>"+config.xml_lineend;
                 break;
             default:
                 if(child!='text'){
@@ -409,4 +405,4 @@ module.exports={
     propfind:propfind,
     report:calendarreport.report,
     gett:gett
-};
+}

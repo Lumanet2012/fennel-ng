@@ -1,11 +1,8 @@
 var config = require('../config').config;
 var redis = require('../libs/redis');
-var VCARDS = require('../libs/db').VCARDS;
-var ADDRESSBOOKS = require('../libs/db').ADDRESSBOOKS;
-var ADDRESSBOOKCHANGES = require('../libs/db').ADDRESSBOOKCHANGES;
-module.exports = {
-    move: move
-};
+var vcards = require('../libs/db').vcards;
+var addressbooks = require('../libs/db').addressbooks;
+var addressbookchanges = require('../libs/db').addressbookchanges;
 function move(comm)
 {
     LSE_Logger.debug(`[Fennel-NG CardDAV] addressbook.move called`);
@@ -37,7 +34,7 @@ function move(comm)
     var sourceAddressbook;
     var targetAddressbook;
     var vcardToMove;
-    ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: sourceAddressbookUri} }).then(function(sourceAdb)
+    addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: sourceAddressbookUri} }).then(function(sourceAdb)
     {
         if(!sourceAdb)
         {
@@ -47,7 +44,7 @@ function move(comm)
             return Promise.reject(new Error('Source addressbook not found'));
         }
         sourceAddressbook = sourceAdb;
-        return ADDRESSBOOKS.findOne({ where: {principaluri: 'principals/' + username, uri: targetAddressbookUri} });
+        return addressbooks.findone({ where: {principaluri: 'principals/' + username, uri: targetAddressbookUri} });
     }).then(function(targetAdb)
     {
         if(!targetAdb)
@@ -58,7 +55,7 @@ function move(comm)
             return Promise.reject(new Error('Target addressbook not found'));
         }
         targetAddressbook = targetAdb;
-        return VCARDS.findOne({ where: {addressbookid: sourceAddressbook.id, uri: vcardUri + '.vcf'}});
+        return vcards.findone({ where: {addressbookid: sourceAddressbook.id, uri: vcardUri + '.vcf'}});
     }).then(function(vcard)
     {
         if(!vcard)
@@ -123,4 +120,7 @@ function generateETag(content)
 {
     var crypto = require('crypto');
     return crypto.createHash('md5').update(content).digest('hex');
+}
+module.exports = {
+    move: move
 }

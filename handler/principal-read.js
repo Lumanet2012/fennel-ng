@@ -1,5 +1,5 @@
-const {XMLParser}=require('fast-xml-parser');
-const parser=new XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix: true});
+const fastxmlparser=require('fast-xml-parser');
+const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
 const xml={parsexml:function(body){return parser.parse(body);}};
 const config=require('../config').config;
 const xh=require("../libs/xmlhelper");
@@ -147,5 +147,4 @@ function report(comm){
 module.exports={
     propfind:propfind,
     report:report
-};
-
+}
