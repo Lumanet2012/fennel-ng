@@ -1,6 +1,7 @@
 const fastxmlparser=require('fast-xml-parser');
 const parser=new fastxmlparser.XMLParser({ignoreAttributes:false,attributeNamePrefix:"@_",textNodeName:"#text",parseAttributeValue:true,removeNSPrefix:true});
 const xml={parsexml:function(body){return parser.parse(body);}};
+const config=require('../config').config;
 function getcalendaruseraddressset(comm){
     let response="";
     response+="        <cal:calendar-user-address-set>"+config.xml_lineend;
