@@ -211,16 +211,18 @@ function mkcalendar(comm){
     });
 }
 function updatecalendarsynctoken(calendarid){
-    return new Promise(function(resolve,reject){
-        calendars.findone({where:{id:calendarid}}).then(function(calendar){
-            if(!calendar){
-                reject(new Error('calendar not found'));
-                return;
-            }
-            calendar.increment('synctoken',{by:1}).then(function(){
-                resolve(calendar.synctoken+1);
-            }).catch(reject);
-        }).catch(reject);
+    const newsynctoken = Math.floor(Date.now() / 1000);
+    if(config.lse_loglevel >= 2){
+        LSE_Logger.debug(`[Fennel-NG CalDAV] updating calendar ${calendarid} synctoken to ${newsynctoken}`);
+    }
+    return calendars.update(
+        {synctoken: newsynctoken},
+        {where: {id: calendarid}}
+    ).then(function(){
+        if(config.lse_loglevel >= 2){
+            LSE_Logger.debug(`[Fennel-NG CalDAV] calendar ${calendarid} synctoken updated successfully to ${newsynctoken}`);
+        }
+        return newsynctoken;
     });
 }
 module.exports={
